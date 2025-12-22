@@ -21,4 +21,13 @@
     <Folder Include="UI\Services\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Assets\Fonts\CascadiaCode.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Fonts\DejaVuSansMono.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

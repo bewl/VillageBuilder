@@ -19,6 +19,7 @@ namespace VillageBuilder.Engine.Buildings
 
     public class Building
     {
+        public int Id { get; }
         public BuildingType Type { get; }
         public string Name { get; set; }
         public int X { get; }
@@ -29,9 +30,12 @@ namespace VillageBuilder.Engine.Buildings
         public int ConstructionProgress { get; set; }
         public List<Person> Workers { get; }
         public ResourceInventory Storage { get; }
+        public bool DoorsOpen { get; set; } // Track if doors are open (allows entry)
+        public List<Person> Residents { get; } // People who live in this building (for houses)
 
-        public Building(BuildingType type, int x, int y, BuildingRotation rotation = BuildingRotation.North)
+        public Building(BuildingType type, int x, int y, BuildingRotation rotation = BuildingRotation.North, int id = 0)
         {
+            Id = id;
             Type = type;
             Name = type.ToString();
             X = x;
@@ -42,6 +46,8 @@ namespace VillageBuilder.Engine.Buildings
             ConstructionProgress = 0;
             Workers = new List<Person>();
             Storage = new ResourceInventory();
+            DoorsOpen = true; // Buildings start with doors open
+            Residents = new List<Person>();
         }
 
         /// <summary>
@@ -50,6 +56,30 @@ namespace VillageBuilder.Engine.Buildings
         public List<Vector2Int> GetDoorPositions()
         {
             return Definition.GetDoorPositions(X, Y, Rotation);
+        }
+        
+        /// <summary>
+        /// Get interior floor positions where people can stand inside the building
+        /// </summary>
+        public List<Vector2Int> GetInteriorPositions()
+        {
+            var interiorPositions = new List<Vector2Int>();
+            
+            // Get all occupied tiles
+            var occupiedTiles = GetOccupiedTiles();
+            
+            foreach (var tilePos in occupiedTiles)
+            {
+                var buildingTile = GetTileAtWorldPosition(tilePos.X, tilePos.Y);
+                
+                // Include floor tiles (not walls, not doors)
+                if (buildingTile.HasValue && buildingTile.Value.Type == BuildingTileType.Floor)
+                {
+                    interiorPositions.Add(tilePos);
+                }
+            }
+            
+            return interiorPositions;
         }
 
         /// <summary>
@@ -61,14 +91,17 @@ namespace VillageBuilder.Engine.Buildings
         }
 
         /// <summary>
-        /// Get the building tile type at a world position
+        /// Get the building tile at a world position
         /// </summary>
         public BuildingTile? GetTileAtWorldPosition(int worldX, int worldY)
         {
-            int localX = worldX - X;
-            int localY = worldY - Y;
+            // Convert world coordinates to local offset from building origin
+            int offsetX = worldX - X;
+            int offsetY = worldY - Y;
             
-            var tile = Definition.GetTileAt(localX, localY, Rotation);
+            // Get the tile - Definition.GetTileAt() handles rotation internally
+            var tile = Definition.GetTileAt(offsetX, offsetY, Rotation);
+            
             return tile.Type != BuildingTileType.Empty ? tile : null;
         }
 
@@ -115,27 +148,74 @@ namespace VillageBuilder.Engine.Buildings
             };
         }
 
-        public void Work(Season season)
+        public void Work(Season currentSeason)
         {
             if (!IsConstructed) return;
 
+            // Production happens when workers are assigned
+            if (Workers.Count == 0) return;
+
             // Different buildings produce different resources
-            foreach (var worker in Workers)
+            // Production scales with number of workers
+            var productionMultiplier = Workers.Count;
+
+            switch (Type)
             {
-                switch (Type)
-                {
-                    case BuildingType.Lumberyard:
-                        Storage.Add(ResourceType.Wood, 5);
-                        break;
-                    case BuildingType.Mine:
-                        Storage.Add(ResourceType.Stone, 3);
-                        Storage.Add(ResourceType.Iron, 1);
-                        break;
-                    case BuildingType.Farm when season != Season.Winter:
-                        Storage.Add(ResourceType.Grain, 10);
-                        break;
-                }
+                case BuildingType.Farm:
+                    // Farms produce grain (more in summer/fall)
+                    var grainAmount = currentSeason == Season.Summer || currentSeason == Season.Fall ? 
+                        2 * productionMultiplier : productionMultiplier;
+                    Storage.Add(ResourceType.Grain, grainAmount);
+                    break;
+
+                case BuildingType.Lumberyard:
+                    // Lumberyards produce wood
+                    Storage.Add(ResourceType.Wood, 1 * productionMultiplier);
+                    break;
+
+                case BuildingType.Mine:
+                    // Mines produce stone
+                    Storage.Add(ResourceType.Stone, 1 * productionMultiplier);
+                    break;
+
+                case BuildingType.Workshop:
+                    // Workshops produce tools (requires wood and stone)
+                    // Check if we have materials
+                    if (Storage.Get(ResourceType.Wood) >= 2 && Storage.Get(ResourceType.Stone) >= 1)
+                    {
+                        Storage.Remove(ResourceType.Wood, 2);
+                        Storage.Remove(ResourceType.Stone, 1);
+                        Storage.Add(ResourceType.Tools, 1 * productionMultiplier);
+                    }
+                    break;
             }
+        }
+
+        /// <summary>
+        /// Check if building is occupied (has people inside)
+        /// Used for lighting effects at night
+        /// </summary>
+        public bool IsOccupied()
+        {
+            // Houses are occupied if they have residents
+            if (Type == BuildingType.House)
+            {
+                return Residents.Any(r => r.IsAlive);
+            }
+            
+            // Other buildings are occupied if they have workers present
+            return Workers.Any(w => w.IsAlive && w.IsAtWork());
+        }
+
+        /// <summary>
+        /// Check if this building should show lights (occupied at night)
+        /// </summary>
+        public bool ShouldShowLights(GameTime time)
+        {
+            if (!IsConstructed) return false;
+            if (!time.IsNight()) return false;
+            
+            return IsOccupied();
         }
     }
 }

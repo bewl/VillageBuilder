@@ -16,9 +16,9 @@ var engine = new GameEngine(gameId: 1, config);
 var viewModel = new GameViewModel(engine);
 var gameLoop = new GameLoopService(viewModel);
 
-// Add this before creating GameRenderer
-Raylib_cs.Raylib.InitWindow(GraphicsConfig.ScreenWidth, GraphicsConfig.ScreenHeight, GraphicsConfig.WindowTitle);
-Raylib_cs.Raylib.SetTargetFPS(GraphicsConfig.TargetFPS);
+// Initialize window (auto-fullscreen if configured size > monitor)
+// GraphicsConfig.InitializeWindow(false) to disable auto fullscreen
+GraphicsConfig.InitializeWindow();
 
 // Load console font
 GraphicsConfig.LoadFont();
@@ -35,7 +35,12 @@ while (!renderer.ShouldClose())
         viewModel.TogglePause();
     
     if (timeScaleChange != 0)
-        viewModel.MultiplyTimeScale(timeScaleChange);
+    {
+        if (timeScaleChange == 0.0f) // Special case: reset to 1x
+            viewModel.SetTimeScale(1.0f);
+        else
+            viewModel.MultiplyTimeScale(timeScaleChange);
+    }
     
     float deltaTime = Raylib_cs.Raylib.GetFrameTime();
     renderer.Update(deltaTime);

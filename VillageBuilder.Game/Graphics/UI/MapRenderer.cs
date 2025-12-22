@@ -13,18 +13,10 @@ namespace VillageBuilder.Game.Graphics.UI
 {
     public class MapRenderer
     {
-        private RenderTexture2D _lightingTexture;
-        private bool _initialized = false;
         private const int FontSize = 16;
 
-        public void Render(GameEngine engine, Camera2D camera)
+        public void Render(GameEngine engine, Camera2D camera, VillageBuilder.Game.Core.SelectionManager? selectionManager = null)
         {
-            if (!_initialized)
-            {
-                _lightingTexture = Raylib.LoadRenderTexture(GraphicsConfig.ScreenWidth, GraphicsConfig.ScreenHeight);
-                _initialized = true;
-            }
-
             var grid = engine.Grid;
             var tileSize = GraphicsConfig.TileSize;
 
@@ -44,6 +36,9 @@ namespace VillageBuilder.Game.Graphics.UI
 
             // Track which buildings we've already drawn
             var drawnBuildings = new HashSet<Building>();
+            
+            // Calculate darkness factor for day/night visual effect
+            float darknessFactor = engine.Time.GetDarknessFactor();
 
             // Render only visible tiles (culling for performance)
             for (int x = minX; x < maxX; x++)
@@ -55,106 +50,120 @@ namespace VillageBuilder.Game.Graphics.UI
 
                     var pos = new Vector2(x * tileSize, y * tileSize);
 
-                    // Draw tile background
+                    // If this tile has a building, only draw it once when we first encounter it
+                    if (tile.Building != null)
+                    {
+                        if (!drawnBuildings.Contains(tile.Building))
+                        {
+                            DrawDetailedBuilding(tile.Building, tileSize, engine.Time);
+                            drawnBuildings.Add(tile.Building);
+                        }
+                        // Skip drawing anything else for building tiles - the building handles it
+                        continue;
+                    }
+
+                    // Draw tile background (only for non-building tiles)
                     var bgColor = GetTileBackgroundColor(tile);
+                    
+                    // Apply darkness overlay for night
+                    if (darknessFactor > 0)
+                    {
+                        bgColor = DarkenColor(bgColor, darknessFactor);
+                    }
+                    
                     Raylib.DrawRectangle((int)pos.X, (int)pos.Y, tileSize, tileSize, bgColor);
 
-                    // Draw building only once per unique building instance
-                    if (tile.Building != null && !drawnBuildings.Contains(tile.Building))
-                    {
-                        DrawDetailedBuilding(tile.Building, tileSize);
-                        drawnBuildings.Add(tile.Building);
-                    }
-                    else if (tile.Building == null)
-                    {
-                        // Draw tile glyph only if no building
-                        DrawTileGlyph(tile, pos, tileSize);
-                    }
+                    // Draw tile glyph
+                    DrawTileGlyph(tile, pos, tileSize, darknessFactor);
                 }
             }
-
-            // Render modern lighting system using render texture
-            RenderModernLighting(engine, camera, tileSize);
             
-            // CRITICAL: Reset blend mode to default after all lighting operations
-            Raylib.BeginBlendMode(BlendMode.Alpha);
-            Raylib.EndBlendMode();
+            // Render people on top of everything
+            RenderPeople(engine, tileSize, minX, maxX, minY, maxY, selectionManager);
+            
+            // Render selection indicators for buildings
+            if (selectionManager?.SelectedBuilding != null)
+            {
+                DrawBuildingSelection(selectionManager.SelectedBuilding, tileSize);
+            }
         }
 
-        private void DrawDetailedBuilding(Building building, int tileSize)
+        private void DrawDetailedBuilding(Building building, int tileSize, GameTime time)
         {
-            var definition = building.Definition;
             var bgColor = GetBuildingBackgroundColor(building.Type);
             var wallColor = GetWallColor(building.Type);
             var floorColor = GetFloorColor(building.Type);
             var doorColor = new Color(120, 80, 40, 255);
+            
+            // Check if building should show lights at night
+            bool showLights = building.ShouldShowLights(time);
+            float darknessFactor = time.GetDarknessFactor();
 
-            // Draw each tile directly from the layout
-            for (int y = 0; y < definition.Height; y++)
+            var occupiedTiles = building.GetOccupiedTiles();
+
+            foreach (var tilePos in occupiedTiles)
             {
-                for (int x = 0; x < definition.Width; x++)
+                var buildingTile = building.GetTileAtWorldPosition(tilePos.X, tilePos.Y);
+                if (buildingTile == null) continue;
+                
+                var pos = new Vector2(tilePos.X * tileSize, tilePos.Y * tileSize);
+
+                Color tileColor = buildingTile.Value.Type switch
                 {
-                    var buildingTile = definition.Layout[y, x];
-                    
-                    if (buildingTile.Type == BuildingTileType.Empty)
-                        continue;
+                    BuildingTileType.Wall => wallColor,
+                    BuildingTileType.Floor => floorColor,
+                    BuildingTileType.Door => doorColor,
+                    _ => bgColor
+                };
+                
+                // Apply darkness overlay
+                if (darknessFactor > 0)
+                {
+                    tileColor = DarkenColor(tileColor, darknessFactor);
+                }
+                
+                // Add warm glow if lights are on
+                if (showLights && buildingTile.Value.Type == BuildingTileType.Floor)
+                {
+                    tileColor = AddWarmGlow(tileColor, 0.4f);
+                }
 
-                    // Calculate world position with rotation
-                    var offset = RotateOffset(new Vector2Int(x, y), building.Rotation);
-                    int worldX = building.X + offset.X;
-                    int worldY = building.Y + offset.Y;
-                    
-                    var pos = new Vector2(worldX * tileSize, worldY * tileSize);
+                Raylib.DrawRectangle((int)pos.X, (int)pos.Y, tileSize, tileSize, tileColor);
 
-                    // Draw background based on tile type
-                    Color tileColor = buildingTile.Type switch
+                if (buildingTile.Value.Glyph != ' ')
+                {
+                    int textX = (int)pos.X + (tileSize - FontSize) / 2;
+                    int textY = (int)pos.Y + (tileSize - FontSize) / 2;
+
+                    Color glyphColor = buildingTile.Value.Type switch
                     {
-                        BuildingTileType.Wall => wallColor,
-                        BuildingTileType.Floor => floorColor,
-                        BuildingTileType.Door => doorColor,
-                        _ => bgColor
+                        BuildingTileType.Wall => new Color(255, 255, 255, 255),
+                        BuildingTileType.Floor => new Color(200, 200, 200, 255),
+                        BuildingTileType.Door => new Color(255, 255, 0, 255),
+                        _ => Color.White
                     };
-
-                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, tileSize, tileSize, tileColor);
-
-                    // Draw the character/glyph - SIMPLIFIED for testing
-                    if (buildingTile.Glyph != ' ')
+                    
+                    // Apply darkness to glyphs too
+                    if (darknessFactor > 0 && !showLights)
                     {
-                        int textX = (int)pos.X + (tileSize - FontSize) / 2;
-                        int textY = (int)pos.Y + (tileSize - FontSize) / 2;
-
-                        Color glyphColor = buildingTile.Type switch
-                        {
-                            BuildingTileType.Wall => new Color(255, 255, 255, 255), // Bright white
-                            BuildingTileType.Floor => new Color(200, 200, 200, 255),
-                            BuildingTileType.Door => new Color(255, 255, 0, 255), // Yellow
-                            _ => Color.White
-                        };
-
-                        // TEMPORARY: Use simple ASCII instead of box-drawing
-                        string displayChar = buildingTile.Type switch
-                        {
-                            BuildingTileType.Wall => "#",  // Use # for walls
-                            BuildingTileType.Floor => ".",
-                            BuildingTileType.Door => "D",  // Use D for door
-                            _ => buildingTile.Glyph.ToString()
-                        };
-
-                        GraphicsConfig.DrawConsoleText(
-                            displayChar,
-                            textX,
-                            textY,
-                            FontSize,
-                            glyphColor
-                        );
+                        glyphColor = DarkenColor(glyphColor, darknessFactor);
                     }
+                    else if (showLights)
+                    {
+                        // Brighten glyphs when lights are on
+                        glyphColor = new Color(255, 255, 200, 255);
+                    }
+
+                    // Use the actual glyph from the building definition
+                    string displayChar = buildingTile.Value.Glyph.ToString();
+
+                    GraphicsConfig.DrawConsoleText(displayChar, textX, textY, FontSize, glyphColor);
                 }
             }
 
-            // Add construction indicator if not complete
+            // Construction indicator (if any)
             if (!building.IsConstructed)
             {
-                var occupiedTiles = building.GetOccupiedTiles();
                 foreach (var tilePos in occupiedTiles)
                 {
                     var pos = new Vector2(tilePos.X * tileSize, tilePos.Y * tileSize);
@@ -163,19 +172,6 @@ namespace VillageBuilder.Game.Graphics.UI
                     GraphicsConfig.DrawConsoleText("?", textX, textY, FontSize, new Color(255, 255, 100, 255));
                 }
             }
-        }
-
-        // This helper method should match the one in BuildingDefinition exactly
-        private Vector2Int RotateOffset(Vector2Int offset, BuildingRotation rotation)
-        {
-            return rotation switch
-            {
-                BuildingRotation.North => offset,
-                BuildingRotation.East => new Vector2Int(-offset.Y, offset.X),
-                BuildingRotation.South => new Vector2Int(-offset.X, -offset.Y),
-                BuildingRotation.West => new Vector2Int(offset.Y, -offset.X),
-                _ => offset
-            };
         }
 
         private Color GetBuildingBackgroundColor(BuildingType type)
@@ -226,162 +222,6 @@ namespace VillageBuilder.Game.Graphics.UI
             };
         }
 
-        private void RenderModernLighting(GameEngine engine, Camera2D camera, int tileSize)
-        {
-            var hour = engine.Time.Hour;
-            var ambientLight = CalculateAmbientLight(hour);
-            
-            // Only apply lighting effects during evening/night
-            if (hour < 6 || hour > 17)
-            {
-                // Render lights to texture for smooth blending
-                Raylib.BeginTextureMode(_lightingTexture);
-                Raylib.ClearBackground(new Color(0, 0, 0, 0)); // Transparent background
-                
-                // Switch to world space
-                Raylib.BeginMode2D(camera);
-                
-                // Use additive blending for light accumulation
-                Raylib.BeginBlendMode(BlendMode.Additive);
-                
-                // Draw each light source
-                foreach (var building in engine.Buildings.Where(b => b.IsConstructed))
-                {
-                    DrawSmoothLight(building, tileSize, hour);
-                }
-                
-                Raylib.EndBlendMode();
-                Raylib.EndMode2D();
-                Raylib.EndTextureMode();
-                
-                // IMPORTANT: We're now back in the calling context (still in world space from GameRenderer)
-                // So we need to temporarily exit world space to draw screen-space lighting effects
-                Raylib.EndMode2D(); // Exit world space temporarily
-                
-                // Draw the lighting texture over the scene with multiplicative blending
-                Raylib.BeginBlendMode(BlendMode.Multiplied);
-                Raylib.DrawTextureRec(
-                    _lightingTexture.Texture,
-                    new Rectangle(0, 0, _lightingTexture.Texture.Width, -_lightingTexture.Texture.Height),
-                    new Vector2(0, 0),
-                    Color.White
-                );
-                Raylib.EndBlendMode();
-                
-                // Draw darkness overlay
-                var darknessAlpha = (byte)(255 - ambientLight);
-                if (darknessAlpha > 0)
-                {
-                    Raylib.BeginBlendMode(BlendMode.Alpha);
-                    Raylib.DrawRectangle(0, 0, GraphicsConfig.ScreenWidth, GraphicsConfig.ScreenHeight,
-                        new Color((byte)5, (byte)10, (byte)25, darknessAlpha));
-                    Raylib.EndBlendMode();
-                }
-                
-                // Re-enter world space so caller's context is maintained
-                Raylib.BeginMode2D(camera);
-            }
-        }
-
-        private void DrawSmoothLight(Building building, int tileSize, int hour)
-        {
-            var centerPos = new Vector2(
-                building.X * tileSize + tileSize / 2f,
-                building.Y * tileSize + tileSize / 2f
-            );
-
-            // Get light properties
-            var (lightColor, intensity, radius, flicker) = GetLightProperties(building.Type);
-            
-            // Skip if no light
-            if (intensity <= 0) return;
-            
-            // Flickering effect
-            float flickerAmount = flicker 
-                ? (float)(Math.Sin(Raylib.GetTime() * 6 + building.X * building.Y) * 0.08 + 0.92) 
-                : 1.0f;
-            
-            // Time-based intensity
-            float timeMultiplier = CalculateLightTimeMultiplier(hour);
-            intensity *= timeMultiplier * flickerAmount;
-            
-            if (intensity <= 0) return;
-
-            float maxRadius = radius * tileSize;
-            
-            // Draw smooth gradient using fewer, larger circles
-            int steps = 12;
-            for (int i = steps; i > 0; i--)
-            {
-                float t = (float)i / steps;
-                float currentRadius = maxRadius * t;
-                
-                // Smooth falloff
-                float falloff = 1.0f - (t * t);
-                byte alpha = (byte)(intensity * falloff * 180);
-                
-                if (alpha > 3)
-                {
-                    var layerColor = new Color(
-                        lightColor.R,
-                        lightColor.G,
-                        lightColor.B,
-                        alpha
-                    );
-                    
-                    Raylib.DrawCircleGradient(
-                        (int)centerPos.X,
-                        (int)centerPos.Y,
-                        currentRadius,
-                        layerColor,
-                        new Color((byte)lightColor.R, (byte)lightColor.G, (byte)lightColor.B, (byte)0)
-                    );
-                }
-            }
-        }
-
-        private (Color color, float intensity, float radius, bool flicker) GetLightProperties(BuildingType buildingType)
-        {
-            return buildingType switch
-            {
-                BuildingType.House => (new Color(255, 200, 130, 255), 0.9f, 5.0f, true),
-                BuildingType.Workshop => (new Color(255, 160, 80, 255), 1.2f, 6.0f, true),
-                BuildingType.Mine => (new Color(255, 210, 150, 255), 0.7f, 4.0f, true),
-                BuildingType.Lumberyard => (new Color(255, 230, 180, 255), 0.5f, 4.0f, false),
-                BuildingType.Market => (new Color(255, 240, 200, 255), 1.0f, 6.0f, false),
-                BuildingType.TownHall => (new Color(255, 245, 220, 255), 1.3f, 8.0f, false),
-                BuildingType.Farm => (new Color(255, 220, 160, 255), 0.4f, 3.0f, false),
-                BuildingType.Warehouse => (new Color(255, 230, 190, 255), 0.3f, 3.0f, false),
-                BuildingType.Well => (new Color(0, 0, 0, 0), 0.0f, 0.0f, false),
-                _ => (new Color(255, 230, 180, 255), 0.5f, 4.0f, false)
-            };
-        }
-
-        private float CalculateLightTimeMultiplier(int hour)
-        {
-            return hour switch
-            {
-                >= 19 or <= 5 => 1.0f,      // Full night
-                18 => 0.8f,                  // Dusk
-                17 => 0.4f,                  // Early evening
-                6 => 0.3f,                   // Dawn
-                _ => 0.0f                    // Day
-            };
-        }
-
-        private byte CalculateAmbientLight(int hour)
-        {
-            return hour switch
-            {
-                >= 8 and <= 16 => 255,       // Full daylight
-                7 or 17 => 200,              // Morning/Evening
-                6 or 18 => 120,              // Dawn/Dusk
-                5 or 19 => 60,               // Early/Late twilight
-                4 or 20 => 35,               // Deep twilight
-                _ => 20                      // Night
-            };
-        }
-
         private Color GetTileBackgroundColor(Tile tile)
         {
             return tile.Type switch
@@ -410,15 +250,139 @@ namespace VillageBuilder.Game.Graphics.UI
             };
         }
 
-        private void DrawTileGlyph(Tile tile, Vector2 pos, int size)
+        private void DrawTileGlyph(Tile tile, Vector2 pos, int size, float darknessFactor)
         {
             string glyph = GetTileGlyph(tile);
             var color = GetTileForegroundColor(tile);
+            
+            // Apply darkness
+            if (darknessFactor > 0)
+            {
+                color = DarkenColor(color, darknessFactor);
+            }
             
             int textX = (int)pos.X + (size - FontSize) / 2;
             int textY = (int)pos.Y + (size - FontSize) / 2;
             
             GraphicsConfig.DrawConsoleText(glyph, textX, textY, FontSize, color);
+        }
+
+        /// <summary>
+        /// Darken a color by a factor (0.0 = no change, 1.0 = black)
+        /// </summary>
+        private Color DarkenColor(Color color, float factor)
+        {
+            factor = Math.Clamp(factor, 0f, 1f);
+            float multiplier = 1.0f - (factor * 0.7f); // Don't go completely black
+            
+            return new Color(
+                (int)(color.R * multiplier),
+                (int)(color.G * multiplier),
+                (int)(color.B * multiplier),
+                color.A
+            );
+        }
+
+        /// <summary>
+        /// Add a warm glow to a color (for lit buildings at night)
+        /// </summary>
+        private Color AddWarmGlow(Color color, float intensity)
+        {
+            intensity = Math.Clamp(intensity, 0f, 1f);
+            
+            return new Color(
+                Math.Min(255, (int)(color.R + 80 * intensity)),
+                Math.Min(255, (int)(color.G + 40 * intensity)),
+                (int)(color.B),
+                color.A
+            );
+        }
+        
+        private void RenderPeople(GameEngine engine, int tileSize, int minX, int maxX, int minY, int maxY, VillageBuilder.Game.Core.SelectionManager? selectionManager)
+        {
+            // Group people by position to handle multiple people per tile
+            var peopleByPosition = engine.Families
+                .SelectMany(f => f.Members)
+                .Where(p => p.IsAlive)
+                .GroupBy(p => new { p.Position.X, p.Position.Y });
+            
+            foreach (var group in peopleByPosition)
+            {
+                int posX = group.Key.X;
+                int posY = group.Key.Y;
+                
+                // Only render if in visible area
+                if (posX < minX || posX >= maxX || posY < minY || posY >= maxY)
+                    continue;
+                
+                var pos = new Vector2(posX * tileSize, posY * tileSize);
+                var peopleAtTile = group.ToList();
+                var displayPerson = peopleAtTile[0]; // Show first person's details
+                
+                // Draw path for first person if moving
+                if (displayPerson.CurrentPath != null && displayPerson.CurrentPath.Count > 0 && displayPerson.CurrentTask == VillageBuilder.Engine.Entities.PersonTask.MovingToLocation)
+                {
+                    for (int i = displayPerson.PathIndex; i < displayPerson.CurrentPath.Count - 1; i++)
+                    {
+                        var pathStart = displayPerson.CurrentPath[i];
+                        var pathEnd = displayPerson.CurrentPath[i + 1];
+                        
+                        var startPos = new Vector2(pathStart.X * tileSize + tileSize / 2, pathStart.Y * tileSize + tileSize / 2);
+                        var endPos = new Vector2(pathEnd.X * tileSize + tileSize / 2, pathEnd.Y * tileSize + tileSize / 2);
+                        
+                        Raylib.DrawLine((int)startPos.X, (int)startPos.Y, (int)endPos.X, (int)endPos.Y, new Color(255, 255, 0, 100));
+                    }
+                }
+                
+                // Draw person background
+                var bgColor = displayPerson.Gender == VillageBuilder.Engine.Entities.Gender.Male 
+                    ? new Color(80, 120, 200, 220)
+                    : new Color(200, 80, 120, 220);
+                
+                Raylib.DrawRectangle((int)pos.X, (int)pos.Y, tileSize, tileSize, bgColor);
+                
+                // Draw selection indicator
+                if (selectionManager?.SelectedPerson == displayPerson)
+                {
+                    Raylib.DrawRectangleLines((int)pos.X, (int)pos.Y, tileSize, tileSize, new Color(255, 255, 0, 255));
+                    Raylib.DrawRectangleLines((int)pos.X + 1, (int)pos.Y + 1, tileSize - 2, tileSize - 2, new Color(255, 255, 0, 255));
+                }
+                
+                // Draw universal person symbol
+                string glyph = "☺";
+                var glyphColor = new Color(255, 255, 255, 255);
+                
+                int textX = (int)pos.X + (tileSize - FontSize) / 2;
+                int textY = (int)pos.Y + (tileSize - FontSize) / 2;
+                
+                GraphicsConfig.DrawConsoleText(glyph, textX, textY, FontSize, glyphColor);
+                
+                // Draw count if multiple people on this tile
+                if (peopleAtTile.Count > 1)
+                {
+                    var countText = peopleAtTile.Count.ToString();
+                    var countColor = new Color(255, 255, 0, 255);
+                    Raylib.DrawCircle((int)pos.X + tileSize - 8, (int)pos.Y + 8, 8, new Color(200, 0, 0, 220));
+                    GraphicsConfig.DrawConsoleText(countText, (int)pos.X + tileSize - 12, (int)pos.Y + 2, 14, countColor);
+                }
+                
+                // Draw task indicator if working
+                if (displayPerson.AssignedBuilding != null)
+                {
+                    var taskColor = new Color(255, 255, 0, 255);
+                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, 3, 3, taskColor);
+                }
+            }
+        }
+        
+        private void DrawBuildingSelection(Building building, int tileSize)
+        {
+            var tiles = building.GetOccupiedTiles();
+            foreach (var tile in tiles)
+            {
+                var pos = new Vector2(tile.X * tileSize, tile.Y * tileSize);
+                Raylib.DrawRectangleLines((int)pos.X, (int)pos.Y, tileSize, tileSize, new Color(0, 255, 0, 255));
+            }
         }
 
         private string GetTileGlyph(Tile tile)

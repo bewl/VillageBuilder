@@ -41,13 +41,13 @@ namespace VillageBuilder.Engine.Commands
         }
 
         /// <summary>
-        /// Process all commands scheduled for current tick
+        /// Process all commands scheduled for the given tick
         /// </summary>
-        public List<CommandExecutionRecord> ProcessTick(GameEngine engine)
+        public List<CommandExecutionRecord> ProcessTick(GameEngine engine, int currentTick)
         {
             var results = new List<CommandExecutionRecord>();
 
-            if (_commandsByTick.TryGetValue(_currentTick, out var commands))
+            if (_commandsByTick.TryGetValue(currentTick, out var commands))
             {
                 // Sort commands by CommandId for deterministic order
                 var sortedCommands = commands.OrderBy(c => c.CommandId).ToList();
@@ -55,16 +55,15 @@ namespace VillageBuilder.Engine.Commands
                 foreach (var command in sortedCommands)
                 {
                     var result = command.Execute(engine);
-                    var record = new CommandExecutionRecord(command, result, _currentTick);
+                    var record = new CommandExecutionRecord(command, result, currentTick);
                     
                     _executionHistory.Add(record);
                     results.Add(record);
                 }
 
-                _commandsByTick.Remove(_currentTick);
+                _commandsByTick.Remove(currentTick);
             }
 
-            _currentTick++;
             return results;
         }
 

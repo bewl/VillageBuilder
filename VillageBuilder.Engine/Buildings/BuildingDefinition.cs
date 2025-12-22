@@ -113,10 +113,146 @@ namespace VillageBuilder.Engine.Buildings
             if (original.X >= 0 && original.X < Width && original.Y >= 0 && original.Y < Height)
             {
                 // Layout is stored in row-major order [row, column] = [y, x]
-                return Layout[original.Y, original.X];
+                var tile = Layout[original.Y, original.X];
+                
+                // Rotate the glyph based on building rotation
+                if (tile.Type != BuildingTileType.Empty && rotation != BuildingRotation.North)
+                {
+                    tile.Glyph = RotateGlyph(tile.Glyph, rotation);
+                }
+                
+                return tile;
             }
             
             return new BuildingTile(BuildingTileType.Empty, ' ');
+        }
+
+        /// <summary>
+        /// Rotate box-drawing characters based on building rotation
+        /// </summary>
+        private static char RotateGlyph(char glyph, BuildingRotation rotation)
+        {
+            // Only rotate once per 90° increment
+            var rotations = rotation switch
+            {
+                BuildingRotation.East => 1,   // 90° clockwise
+                BuildingRotation.South => 2,  // 180°
+                BuildingRotation.West => 3,   // 270° clockwise
+                _ => 0
+            };
+            
+            var result = glyph;
+            for (int i = 0; i < rotations; i++)
+            {
+                result = RotateGlyphOnce(result);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Rotate a box-drawing character 90° clockwise
+        /// </summary>
+        private static char RotateGlyphOnce(char glyph)
+        {
+            return glyph switch
+            {
+                // Single-line corners (rotate clockwise)
+                '┌' => '┐',  // Top-left → Top-right
+                '┐' => '┘',  // Top-right → Bottom-right
+                '┘' => '└',  // Bottom-right → Bottom-left
+                '└' => '┌' , // Bottom-left → Top-left
+                
+                // Single-line T-junctions (rotate clockwise)
+                '├' => '┬',  // Left T → Top T
+                '┬' => '┤',  // Top T → Right T
+                '┤' => '┴',  // Right T → Bottom T
+                '┴' => '├',  // Bottom T → Left T
+                
+                // Straight lines - these ALTERNATE, not rotate
+                '─' => '│',  // Horizontal → Vertical
+                '│' => '─',  // Vertical → Horizontal
+                
+                // Double-line corners
+                '╔' => '╗',
+                '╗' => '╝',
+                '╝' => '╚',
+                '╚' => '╔',
+                
+                // Double-line straight
+                '═' => '║',
+                '║' => '═',
+                
+                // Double-line T-junctions
+                '╠' => '╦',
+                '╦' => '╣',
+                '╣' => '╩',
+                '╩' => '╠',
+                
+                // Mixed single/double T-junctions (added these missing ones)
+                '╞' => '╥',
+                '╥' => '╡',
+                '╡' => '╨',
+                '╨' => '╞',
+                
+                '╟' => '╤',
+                '╤' => '╢',
+                '╢' => '╧',
+                '╧' => '╟',
+                
+                // Cross (stays the same - symmetric)
+                '┼' => '┼',
+                '╬' => '╬',
+                '╪' => '╫',  // Vertical line with horizontal double → Horizontal line with vertical double
+                '╫' => '╪',
+                
+                // Block characters (stay the same - symmetric)
+                '█' => '█',
+                '▓' => '▓',
+                '▒' => '▒',
+                '░' => '░',
+                '■' => '■',
+                '□' => '□',
+                
+                // Dots and small symbols (stay the same)
+                '.' => '.',
+                '·' => '·',
+                '○' => '○',
+                '●' => '●',
+                '◦' => '◦',
+                
+                // Directional arrows
+                '↑' => '→',
+                '→' => '↓',
+                '↓' => '←',
+                '←' => '↑',
+                
+                '▲' => '▶',
+                '▶' => '▼',
+                '▼' => '◀',
+                '◀' => '▲',
+                
+                // Diagonal lines
+                '/' => '\\',
+                '\\' => '/',
+                
+                // Diamond shapes (stay the same - symmetric)
+                '◆' => '◆',
+                '◇' => '◇',
+                '◊' => '◊',
+                
+                // Card suits (stay the same - mostly symmetric)
+                '♠' => '♠',
+                '♣' => '♣',
+                '♥' => '♥',
+                '♦' => '♦',
+                
+                // Smileys (stay the same)
+                '☺' => '☺',
+                '☻' => '☻',
+                
+                // Default: return unchanged
+                _ => glyph
+            };
         }
 
         /// <summary>
@@ -132,14 +268,19 @@ namespace VillageBuilder.Engine.Buildings
             };
         }
 
+        // Correct rotation helpers that rotate around the layout's top-left origin,
+        // keeping coordinates inside [0..Width-1]/[0..Height-1] as expected.
         private Vector2Int RotateOffset(Vector2Int offset, BuildingRotation rotation)
         {
             return rotation switch
             {
                 BuildingRotation.North => offset,
-                BuildingRotation.East => new Vector2Int(-offset.Y, offset.X),
-                BuildingRotation.South => new Vector2Int(-offset.X, -offset.Y),
-                BuildingRotation.West => new Vector2Int(offset.Y, -offset.X),
+                // 90° clockwise: (x,y) -> (Height - 1 - y, x)
+                BuildingRotation.East => new Vector2Int(Height - 1 - offset.Y, offset.X),
+                // 180°: (x,y) -> (Width - 1 - x, Height - 1 - y)
+                BuildingRotation.South => new Vector2Int(Width - 1 - offset.X, Height - 1 - offset.Y),
+                // 270° clockwise: (x,y) -> (y, Width - 1 - x)
+                BuildingRotation.West => new Vector2Int(offset.Y, Width - 1 - offset.X),
                 _ => offset
             };
         }
@@ -149,9 +290,12 @@ namespace VillageBuilder.Engine.Buildings
             return rotation switch
             {
                 BuildingRotation.North => offset,
-                BuildingRotation.East => new Vector2Int(offset.Y, -offset.X),
-                BuildingRotation.South => new Vector2Int(-offset.X, -offset.Y),
-                BuildingRotation.West => new Vector2Int(-offset.Y, offset.X),
+                // Inverse of East: (x',y') = (Height - 1 - y, x) => (y' = x, x' = Height - 1 - y) => (y', Height - 1 - x')
+                BuildingRotation.East => new Vector2Int(offset.Y, Height - 1 - offset.X),
+                // Inverse of South: same as South (180° is self-inverse)
+                BuildingRotation.South => new Vector2Int(Width - 1 - offset.X, Height - 1 - offset.Y),
+                // Inverse of West: (x',y') = (y, Width - 1 - x) => (x' = y, y' = Width - 1 - x) => (Width - 1 - y', x')
+                BuildingRotation.West => new Vector2Int(Width - 1 - offset.Y, offset.X),
                 _ => offset
             };
         }
@@ -183,10 +327,10 @@ namespace VillageBuilder.Engine.Buildings
                 height: 4,
                 layout: new BuildingTile[,]
                 {
-                    { Wall('┌'), Wall('─'), Wall('─'), Wall('─'), Wall('─'), Wall('┐') },
-                    { Wall('│'), Floor('.'), Floor('.'), Floor('.'), Floor('.'), Wall('│') },
-                    { Wall('│'), Floor('.'), Floor('.'), Floor('.'), Floor('.'), Wall('│') },
-                    { Wall('└'), Door('▒'), Door('▒'), Wall('─'), Wall('─'), Wall('┘') }
+                    { Wall('┌'), Wall('─'), Wall('─'), Wall('─'), Wall('─'), Wall('┐') },  // Top row
+                    { Wall('│'), Floor('.'), Floor('.'), Floor('.'), Floor('.'), Wall('│') },  // Middle
+                    { Wall('│'), Floor('.'), Floor('.'), Floor('.'), Floor('.'), Wall('│') },  // Middle
+                    { Wall('└'), Door('▒'), Door('▒'), Wall('─'), Wall('─'), Wall('┘') }   // Bottom row
                 },
                 doorPositions: new List<Vector2Int> { new(1, 3), new(2, 3) }
             );

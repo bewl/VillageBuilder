@@ -61,10 +61,10 @@ namespace VillageBuilder.Engine.Core
     /// </summary>
     public class StartingResources
     {
-        public int Wood { get; set; } = 100;
-        public int Stone { get; set; } = 50;
-        public int Tools { get; set; } = 10;
-        public int Grain { get; set; } = 200;
-        public int Firewood { get; set; } = 50;
+        public int Wood { get; set; } = 10000;
+        public int Stone { get; set; } = 5000;
+        public int Tools { get; set; } = 1000;
+        public int Grain { get; set; } = 20000;
+        public int Firewood { get; set; } = 5000;
     }
 }

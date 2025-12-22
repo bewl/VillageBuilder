@@ -7,8 +7,10 @@ using Raylib_cs;
 using VillageBuilder.Engine.Core;
 using VillageBuilder.Engine.World;
 using VillageBuilder.Engine.Buildings;
+using VillageBuilder.Engine.Entities;
 using VillageBuilder.Engine.Commands.BuildingCommands;
 using VillageBuilder.Game.Graphics.UI;
+using VillageBuilder.Game.Core;
 using System.Numerics;
 
 namespace VillageBuilder.Game.Graphics
@@ -21,10 +23,13 @@ namespace VillageBuilder.Game.Graphics
         private readonly MapRenderer _mapRenderer;
         private readonly SidebarRenderer _sidebar;
         private readonly ParticleSystem _particleSystem;
+        private readonly TooltipRenderer _tooltipRenderer;
+        private readonly SelectionManager _selectionManager;
 
         private float _cameraX = 50;
         private float _cameraY = 50;
         private float _zoom = 1.0f;
+        private bool _shouldQuit = false;
 
         // Building placement state
         private BuildingType? _selectedBuildingType = null;
@@ -34,6 +39,10 @@ namespace VillageBuilder.Game.Graphics
         private int _hoveredTileY = -1; 
         private int _hoveredTileZ = -1;
         private bool _roadSnapEnabled = true;
+        
+        // Entity hover/selection state
+        private Person? _hoveredPerson = null;
+        private Building? _hoveredBuilding = null;
 
         public GameRenderer(GameEngine engine)
         {
@@ -51,6 +60,8 @@ namespace VillageBuilder.Game.Graphics
             _mapRenderer = new MapRenderer();
             _sidebar = new SidebarRenderer();
             _particleSystem = new ParticleSystem();
+            _tooltipRenderer = new TooltipRenderer();
+            _selectionManager = new SelectionManager();
         }
 
         public void Initialize()
@@ -61,7 +72,7 @@ namespace VillageBuilder.Game.Graphics
 
         public bool ShouldClose()
         {
-            return Raylib.WindowShouldClose();
+            return _shouldQuit || Raylib.WindowShouldClose();
         }
 
         public void HandleInput(out bool pause, out float timeScaleChange)
@@ -69,15 +80,17 @@ namespace VillageBuilder.Game.Graphics
             pause = false;
             timeScaleChange = 0;
 
-            // Camera movement
+            // Camera movement - only if not cycling through people
             float baseSpeed = 300.0f;
             float deltaTime = Raylib.GetFrameTime();
             float moveAmount = baseSpeed * deltaTime / _zoom;
 
-            if (Raylib.IsKeyDown(KeyboardKey.Up)) _cameraY -= moveAmount / GraphicsConfig.TileSize;
-            if (Raylib.IsKeyDown(KeyboardKey.Down)) _cameraY += moveAmount / GraphicsConfig.TileSize;
-            if (Raylib.IsKeyDown(KeyboardKey.Left)) _cameraX -= moveAmount / GraphicsConfig.TileSize;
-            if (Raylib.IsKeyDown(KeyboardKey.Right)) _cameraX += moveAmount / GraphicsConfig.TileSize;
+            bool isCyclingPeople = _selectionManager.HasMultiplePeople();
+            
+            if (!isCyclingPeople && Raylib.IsKeyDown(KeyboardKey.Up)) _cameraY -= moveAmount / GraphicsConfig.TileSize;
+            if (!isCyclingPeople && Raylib.IsKeyDown(KeyboardKey.Down)) _cameraY += moveAmount / GraphicsConfig.TileSize;
+            if (!isCyclingPeople && Raylib.IsKeyDown(KeyboardKey.Left)) _cameraX -= moveAmount / GraphicsConfig.TileSize;
+            if (!isCyclingPeople && Raylib.IsKeyDown(KeyboardKey.Right)) _cameraX += moveAmount / GraphicsConfig.TileSize;
 
             _cameraX = Math.Clamp(_cameraX, 0, _engine.Grid.Width);
             _cameraY = Math.Clamp(_cameraY, 0, _engine.Grid.Height);
@@ -111,18 +124,55 @@ namespace VillageBuilder.Game.Graphics
                     _ => BuildingRotation.North
                 };
             }
-
-            // Toggle road snap (Tab key)
-            if (Raylib.IsKeyPressed(KeyboardKey.Tab))
-            {
-                _roadSnapEnabled = !_roadSnapEnabled;
-            }
             
             // Cancel building placement
             if (Raylib.IsKeyPressed(KeyboardKey.Escape) || Raylib.IsMouseButtonPressed(MouseButton.Right))
             {
-                _selectedBuildingType = null;
-                _currentRotation = BuildingRotation.North;
+                if (_selectedBuildingType.HasValue)
+                {
+                    _selectedBuildingType = null;
+                    _currentRotation = BuildingRotation.North;
+                }
+                else
+                {
+                    // Clear selection if ESC pressed and not in building mode
+                    _selectionManager.ClearSelection();
+                }
+            }
+            
+            // Tab key handling - context sensitive
+            if (Raylib.IsKeyPressed(KeyboardKey.Tab))
+            {
+                // If multiple people selected, cycle through them
+                if (_selectionManager.HasMultiplePeople())
+                {
+                    if (Raylib.IsKeyDown(KeyboardKey.LeftShift) || Raylib.IsKeyDown(KeyboardKey.RightShift))
+                    {
+                        _selectionManager.CyclePreviousPerson();
+                    }
+                    else
+                    {
+                        _selectionManager.CycleNextPerson();
+                    }
+                }
+                // Otherwise, toggle road snap when in building mode
+                else if (_selectedBuildingType.HasValue)
+                {
+                    _roadSnapEnabled = !_roadSnapEnabled;
+                }
+            }
+            
+            // Arrow keys for cycling people (when person selected and multiple on tile)
+            if (_selectionManager.HasMultiplePeople())
+            {
+                if (Raylib.IsKeyPressed(KeyboardKey.Left) || Raylib.IsKeyPressed(KeyboardKey.Up))
+                {
+                    _selectionManager.CyclePreviousPerson();
+                }
+                else if (Raylib.IsKeyPressed(KeyboardKey.Right) || Raylib.IsKeyPressed(KeyboardKey.Down))
+                {
+                    _selectionManager.CycleNextPerson();
+                }
             }
 
             // Get mouse world position
@@ -141,18 +191,61 @@ namespace VillageBuilder.Game.Graphics
                 }
             }
 
-            // Place building on left click
-            if (_selectedBuildingType.HasValue && Raylib.IsMouseButtonPressed(MouseButton.Left))
+            // Handle mouse clicks
+            if (Raylib.IsMouseButtonPressed(MouseButton.Left))
             {
-                TryPlaceBuilding(_selectedBuildingType.Value, _hoveredTileX, _hoveredTileY, _currentRotation);
-                // Keep building mode active but reset rotation
-                _currentRotation = BuildingRotation.North;
+                var mousePos = Raylib.GetMousePosition();
+                bool clickHandled = false;
+                
+                // Check if clicking on sidebar (right 30% of screen)
+                int sidebarX = (int)(GraphicsConfig.ScreenWidth * 0.7f);
+                if (mousePos.X >= sidebarX)
+                {
+                    // Click is on sidebar, don't handle as entity selection
+                    clickHandled = true;
+                }
+                
+                if (!clickHandled)
+                {
+                    if (_selectedBuildingType.HasValue)
+                    {
+                        // Place building
+                        TryPlaceBuilding(_selectedBuildingType.Value, _hoveredTileX, _hoveredTileY, _currentRotation);
+                    }
+                    else
+                    {
+                        // Select entity - always check tile for people, not just hover
+                        var clickedTile = _engine.Grid.GetTile((int)(_mouseWorldPos.X / GraphicsConfig.TileSize), 
+                                                               (int)(_mouseWorldPos.Y / GraphicsConfig.TileSize));
+                        
+                        if (clickedTile != null && clickedTile.PeopleOnTile.Count > 0)
+                        {
+                            // Always select people on the tile, regardless of hover state
+                            _selectionManager.SelectPeopleAtTile(clickedTile.PeopleOnTile);
+                        }
+                        else if (_hoveredBuilding != null)
+                        {
+                            _selectionManager.SelectBuilding(_hoveredBuilding);
+                        }
+                        else
+                        {
+                            _selectionManager.ClearSelection();
+                        }
+                    }
+                }
             }
 
             // Game controls
             if (Raylib.IsKeyPressed(KeyboardKey.Space)) pause = true;
-            if (Raylib.IsKeyPressed(KeyboardKey.Equal)) timeScaleChange = 2.0f;
-            if (Raylib.IsKeyPressed(KeyboardKey.Minus)) timeScaleChange = 0.5f;
+            if (Raylib.IsKeyPressed(KeyboardKey.Equal) || Raylib.IsKeyPressed(KeyboardKey.KpAdd)) timeScaleChange = 2.0f;
+            if (Raylib.IsKeyPressed(KeyboardKey.Minus) || Raylib.IsKeyPressed(KeyboardKey.KpSubtract)) timeScaleChange = 0.5f;
+            if (Raylib.IsKeyPressed(KeyboardKey.Zero) || Raylib.IsKeyPressed(KeyboardKey.Kp0)) timeScaleChange = 0.0f; // Reset to 1x (special handling needed)
+            
+            // Quit game with Q key
+            if (Raylib.IsKeyPressed(KeyboardKey.Q))
+            {
+                _shouldQuit = true;
+            }
 
             // Update camera
             _camera.Target = new Vector2(_cameraX * GraphicsConfig.TileSize, _cameraY * GraphicsConfig.TileSize);
@@ -252,10 +345,10 @@ namespace VillageBuilder.Game.Graphics
                 }
             }
 
-            // Submit command with rotation
+            // Submit command with rotation - execute immediately for instant feedback
             var command = new ConstructBuildingCommand(
                 playerId: 0,
-                targetTick: _engine.CurrentTick + 1,
+                targetTick: _engine.CurrentTick, // Execute this tick, not next tick
                 buildingType: buildingType,
                 x: x,
                 y: y,
@@ -278,7 +371,7 @@ namespace VillageBuilder.Game.Graphics
             Raylib.BeginMode2D(_camera);
             
             // Render the map (tiles, buildings, lighting - all handled by MapRenderer)
-            _mapRenderer.Render(_engine, _camera);
+            _mapRenderer.Render(_engine, _camera, _selectionManager);
             
             // Draw particles (also in world space)
             _particleSystem.Render();
@@ -297,12 +390,19 @@ namespace VillageBuilder.Game.Graphics
 
             // Render UI (screen space - no camera)
             _statusBar.Render(_engine, timeScale, isPaused);
-            _sidebar.Render(_engine);
+            _sidebar.Render(_engine, _selectionManager); // Pass selection manager to sidebar
 
             // Draw building placement UI
             if (_selectedBuildingType.HasValue)
             {
                 DrawBuildingPlacementUI(_selectedBuildingType.Value);
+            }
+            
+            // Render tooltip (must be after everything else to be on top)
+            if (!_selectedBuildingType.HasValue && !_selectionManager.HasSelection()) // Don't show tooltip when something is selected
+            {
+                var mousePos = Raylib.GetMousePosition();
+                _tooltipRenderer.RenderTooltip(_engine, _hoveredPerson, _hoveredBuilding, (int)mousePos.X, (int)mousePos.Y);
             }
 
             // Debug info - positioned below status bar in top-right corner
@@ -535,6 +635,36 @@ namespace VillageBuilder.Game.Graphics
         public void Update(float deltaTime)
         {
             _particleSystem.Update(deltaTime);
+            
+            // Update hover detection for entities
+            UpdateEntityHover();
+        }
+        
+        private void UpdateEntityHover()
+        {
+            _hoveredPerson = null;
+            _hoveredBuilding = null;
+            
+            // Get mouse position in world space
+            var mouseScreenPos = Raylib.GetMousePosition();
+            var mouseWorldPos = Raylib.GetScreenToWorld2D(mouseScreenPos, _camera);
+            
+            int worldTileX = (int)(mouseWorldPos.X / GraphicsConfig.TileSize);
+            int worldTileY = (int)(mouseWorldPos.Y / GraphicsConfig.TileSize);
+            
+            // Check for person hover
+            var tile = _engine.Grid.GetTile(worldTileX, worldTileY);
+            if (tile != null && tile.PeopleOnTile.Count > 0)
+            {
+                _hoveredPerson = tile.PeopleOnTile[0];
+                return;
+            }
+            
+            // Check for building hover
+            if (tile?.Building != null)
+            {
+                _hoveredBuilding = tile.Building;
+            }
         }
 
         public void Shutdown()

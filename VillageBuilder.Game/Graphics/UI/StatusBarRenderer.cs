@@ -11,8 +11,8 @@ namespace VillageBuilder.Game.Graphics.UI
     public class StatusBarRenderer
     {
         private const int Padding = 8;
-        private const int FontSize = 16;
-        private const int SmallFontSize = 14;
+        private const int FontSize = GraphicsConfig.ConsoleFontSize; // Use config values
+        private const int SmallFontSize = GraphicsConfig.SmallConsoleFontSize; // Use config values
 
         public void Render(GameEngine engine, float timeScale, bool isPaused)
         {
@@ -24,16 +24,13 @@ namespace VillageBuilder.Game.Graphics.UI
             // Draw bottom border
             DrawHorizontalBorder(0, barHeight - 1, GraphicsConfig.ScreenWidth);
 
-            // Row 1: Time, Weather, Speed
+            // Row 1: Time, Weather, Speed (adjusted spacing for 20px font)
             RenderTimeInfo(engine, Padding, Padding);
-            RenderWeatherInfo(engine, 350, Padding);
-            RenderSpeedInfo(timeScale, isPaused, GraphicsConfig.ScreenWidth - 250, Padding);
+            RenderWeatherInfo(engine, 450, Padding);
+            RenderSpeedInfo(timeScale, isPaused, GraphicsConfig.ScreenWidth - 300, Padding);
 
-            // Row 2: Key Resources
-            RenderResources(engine, Padding, Padding + 20);
-
-            // Row 3: Population and Buildings
-            RenderPopulationAndBuildings(engine, Padding, Padding + 38);
+            // Row 2: Key Resources (adjusted spacing)
+            RenderResources(engine, Padding, Padding + 26);
         }
 
         private void DrawHorizontalBorder(int x, int y, int width)
@@ -48,6 +45,11 @@ namespace VillageBuilder.Game.Graphics.UI
             var time = engine.Time;
             var season = GetSeasonAscii(time.CurrentSeason);
             var seasonColor = GetSeasonColor(time.CurrentSeason);
+            
+            // Get time of day for display
+            var timeOfDay = time.GetTimeOfDay();
+            var timeOfDayIcon = GetTimeOfDayIcon(timeOfDay);
+            var timeOfDayColor = GetTimeOfDayColor(timeOfDay);
 
             // Draw compact time display
             var yearText = $"Y{time.Year}";
@@ -72,6 +74,10 @@ namespace VillageBuilder.Game.Graphics.UI
 
             GraphicsConfig.DrawConsoleText("|", x, y, FontSize, new Color(80, 80, 80, 255));
             x += GraphicsConfig.MeasureText("|", FontSize) + 8;
+
+            // Show time of day icon
+            GraphicsConfig.DrawConsoleText(timeOfDayIcon, x, y, FontSize, timeOfDayColor);
+            x += GraphicsConfig.MeasureText(timeOfDayIcon, FontSize) + 8;
 
             var hourText = $"{time.Hour:D2}:00";
             GraphicsConfig.DrawConsoleText(hourText, x, y, FontSize, new Color(150, 200, 255, 255));
@@ -218,6 +224,30 @@ namespace VillageBuilder.Game.Graphics.UI
             if (temperature < 15) return new Color(150, 200, 255, 255); // Cool blue
             if (temperature < 25) return new Color(255, 255, 200, 255); // Warm yellow
             return new Color(255, 100, 100, 255); // Hot red
+        }
+
+        private string GetTimeOfDayIcon(TimeOfDay timeOfDay)
+        {
+            return timeOfDay switch
+            {
+                TimeOfDay.Morning => "☀",   // Sun
+                TimeOfDay.Afternoon => "☀", // Sun with rays
+                TimeOfDay.Evening => "☽",   // Crescent moon
+                TimeOfDay.Night => "☾",     // Full moon
+                _ => "☀"
+            };
+        }
+
+        private Color GetTimeOfDayColor(TimeOfDay timeOfDay)
+        {
+            return timeOfDay switch
+            {
+                TimeOfDay.Morning => new Color(255, 255, 150, 255),
+                TimeOfDay.Afternoon => new Color(255, 220, 100, 255),
+                TimeOfDay.Evening => new Color(150, 150, 255, 255),
+                TimeOfDay.Night => new Color(100, 100, 150, 255),
+                _ => Color.White
+            };
         }
     }
 }

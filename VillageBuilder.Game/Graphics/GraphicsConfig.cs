@@ -21,15 +21,51 @@ namespace VillageBuilder.Game.Graphics
         public const int ConsoleRows = 67;
 
         // UI Layout
-        public const int StatusBarHeight = 48; // 3 rows of tiles
+        public const int StatusBarHeight = 60; // Increased for 20px font with proper spacing
         public const int MapViewportWidth = 84; // 70% of console
         public const int SidebarWidth = 36; // 30% of console
 
         // Font settings
         public static Font ConsoleFont { get; private set; }
-        public const int ConsoleFontSize = 16;
-        public const int SmallConsoleFontSize = 14;
+        public const int ConsoleFontSize = 20;
+        public const int SmallConsoleFontSize = 18;
         private static bool _fontLoaded = false;
+
+        /// <summary>
+        /// Initializes the Raylib window in borderless fullscreen windowed mode.
+        /// This allows easy alt-tabbing and better debugging experience.
+        /// </summary>
+        /// <param name="allowFullscreenIfNeeded">Ignored - always uses borderless windowed mode.</param>
+        public static void InitializeWindow(bool allowFullscreenIfNeeded = true)
+        {
+            // Query primary monitor size with fallback
+            int monitorWidth = Raylib.GetMonitorWidth(0);
+            int monitorHeight = Raylib.GetMonitorHeight(0);
+            
+            // Fallback to common resolution if monitor query fails
+            if (monitorWidth == 0 || monitorHeight == 0)
+            {
+                monitorWidth = 1920;
+                monitorHeight = 1080;
+                Console.WriteLine("WARNING: Monitor detection failed, using fallback 1920x1080");
+            }
+
+            // Disable MSAA and enable flags for pixel-perfect rendering
+            Raylib.SetConfigFlags(ConfigFlags.UndecoratedWindow | ConfigFlags.VSyncHint);
+            
+            // Initialize window at monitor resolution
+            Raylib.InitWindow(monitorWidth, monitorHeight, WindowTitle);
+            
+            // Set window position to top-left corner (0, 0) to cover taskbar
+            Raylib.SetWindowPosition(0, 0);
+            
+            // Disable ESC key as exit key (we handle ESC ourselves for UI navigation)
+            Raylib.SetExitKey(0);
+            
+            Raylib.SetTargetFPS(TargetFPS);
+            
+            Console.WriteLine($"GraphicsConfig: Initialized borderless windowed mode ({monitorWidth}x{monitorHeight}) at position (0, 0)");
+        }
 
         public static void LoadFont()
         {
@@ -107,13 +143,19 @@ namespace VillageBuilder.Game.Graphics
             Array.Resize(ref codepoints, idx);
 
             // Try to load bundled fonts first, then fallback to system fonts
+            // Prioritize fonts with good weight and clarity at medium sizes
             string[] fontPaths = new[]
             {
-                "assets/fonts/DejaVuSansMono.ttf",
-                "assets/fonts/CascadiaCode.ttf",
+                "C:\\Windows\\Fonts\\consola.ttf",         // Consolas - good weight and readability
+                "C:\\Windows\\Fonts\\lucon.ttf",           // Lucida Console - thick and clear
+                "C:\\Windows\\Fonts\\cour.ttf",            // Courier New - too thin
+                "assets/fonts/Px437_IBM_VGA_8x16.ttf",     // Authentic DOS VGA font
+                "assets/fonts/PerfectDOSVGA437.ttf",       // Another DOS font option
                 "assets/fonts/CascadiaMono.ttf",
-                "C:\\Windows\\Fonts\\consola.ttf",      // Windows Consolas
-                "C:\\Windows\\Fonts\\DejaVuSansMono.ttf"
+                "assets/fonts/CascadiaCode.ttf",
+                "assets/fonts/DejaVuSansMono.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",  // Linux
+                "/System/Library/Fonts/Monaco.ttf"          // macOS
             };
 
             foreach (var fontPath in fontPaths)
@@ -123,8 +165,18 @@ namespace VillageBuilder.Game.Graphics
                     try
                     {
                         ConsoleFont = Raylib.LoadFontEx(fontPath, ConsoleFontSize, codepoints, codepoints.Length);
-                        _fontLoaded = true;
+                        
+                        // CRITICAL: Set point filter (nearest neighbor) for crisp pixel-perfect rendering
+                        // This must be done AFTER loading the font
+                        Raylib.SetTextureFilter(ConsoleFont.Texture, TextureFilter.Point);
+                        
+                        // Verify the texture filter was set
                         System.Console.WriteLine($"✓ Font loaded: {System.IO.Path.GetFileName(fontPath)}");
+                        System.Console.WriteLine($"  Font size: {ConsoleFontSize}px");
+                        System.Console.WriteLine($"  Texture ID: {ConsoleFont.Texture.Id}");
+                        System.Console.WriteLine($"  Texture filter: Point (nearest neighbor) - CRISP MODE");
+                        
+                        _fontLoaded = true;
                         return;
                     }
                     catch (Exception ex)
@@ -135,8 +187,10 @@ namespace VillageBuilder.Game.Graphics
             }
 
             // Final fallback
-            System.Console.WriteLine("⚠ Warning: No font with Unicode support found. Symbols may not display correctly.");
+            System.Console.WriteLine("⚠ Warning: No font with Unicode support found. Using default font.");
             ConsoleFont = Raylib.GetFontDefault();
+            Raylib.SetTextureFilter(ConsoleFont.Texture, TextureFilter.Point);
+            System.Console.WriteLine($"  Default font texture filter: Point (nearest neighbor)");
             _fontLoaded = true;
         }
 
@@ -181,12 +235,16 @@ namespace VillageBuilder.Game.Graphics
 
         public static void DrawConsoleText(string text, int x, int y, int fontSize, Color color)
         {
+            // Round coordinates to whole pixels for crisp rendering
+            var pixelX = (float)Math.Round((double)x);
+            var pixelY = (float)Math.Round((double)y);
+            
             Raylib.DrawTextEx(
                 ConsoleFont,
                 text,
-                new System.Numerics.Vector2(x, y),
+                new System.Numerics.Vector2(pixelX, pixelY),
                 fontSize,
-                2.0f, // Increased spacing for better readability
+                1.0f, // Minimal spacing to prevent overlap while maintaining sharpness
                 color
             );
         }

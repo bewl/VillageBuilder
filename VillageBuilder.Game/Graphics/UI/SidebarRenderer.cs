@@ -19,7 +19,7 @@ namespace VillageBuilder.Game.Graphics.UI
         private int _sidebarWidth;
         private int _sidebarHeight;
 
-        public void Render(GameEngine engine)
+        public void Render(GameEngine engine, VillageBuilder.Game.Core.SelectionManager? selectionManager = null)
         {
             // Calculate sidebar position (right side of screen)
             _sidebarX = (int)(GraphicsConfig.ScreenWidth * 0.7f);
@@ -35,13 +35,28 @@ namespace VillageBuilder.Game.Graphics.UI
 
             var currentY = _sidebarY + Padding;
 
-            // Section 1: Quick Stats
-            currentY = RenderQuickStats(engine, currentY);
+            // Show context-aware content based on selection
+            if (selectionManager != null && selectionManager.HasSelection())
+            {
+                if (selectionManager.SelectedPerson != null)
+                {
+                    // Show person info
+                    currentY = RenderPersonInfo(engine, selectionManager.SelectedPerson, currentY, selectionManager);
+                }
+                else if (selectionManager.SelectedBuilding != null)
+                {
+                    // Show building info with family assignment
+                    currentY = RenderBuildingInfo(engine, selectionManager.SelectedBuilding, currentY);
+                }
+            }
+            else
+            {
+                // Default view - show quick stats and map commands
+                currentY = RenderQuickStats(engine, currentY);
+                currentY = RenderCommands(engine, currentY);
+            }
 
-            // Section 2: Commands/Buildings
-            currentY = RenderCommands(engine, currentY);
-
-            // Section 3: Event Log
+            // Event Log is always shown at bottom
             RenderEventLog(currentY);
         }
 
@@ -133,8 +148,9 @@ namespace VillageBuilder.Game.Graphics.UI
             var controls = new[]
             {
                 ("SPACE", "Pause/Resume", new Color(100, 255, 100, 255)),
-                ("+", "Speed Up", new Color(255, 255, 100, 255)),
+                ("+", "Speed Up (max 16x)", new Color(255, 255, 100, 255)),
                 ("-", "Slow Down", new Color(255, 255, 100, 255)),
+                ("0", "Reset to 1x", new Color(255, 255, 100, 255)),
                 ("", "", Color.White), // Spacer
                 ("H", "Build House", new Color(255, 180, 100, 255)),
                 ("F", "Build Farm", new Color(255, 180, 100, 255)),
@@ -258,6 +274,334 @@ namespace VillageBuilder.Game.Graphics.UI
                 LogLevel.Success => new Color(100, 255, 100, 255),
                 _ => Color.White
             };
+        }
+        
+        private int RenderPersonInfo(GameEngine engine, VillageBuilder.Engine.Entities.Person person, int startY, VillageBuilder.Game.Core.SelectionManager? selectionManager = null)
+        {
+            var y = startY;
+            var textColor = new Color(200, 200, 200, 255);
+
+            DrawSectionHeader("PERSON INFO", y);
+            y += LineHeight + 5;
+            
+            // Show person index if multiple people on tile
+            if (selectionManager != null && selectionManager.HasMultiplePeople())
+            {
+                var countText = $"│ Person {selectionManager.SelectedPersonIndex + 1} of {selectionManager.PeopleAtSelectedTile!.Count}";
+                GraphicsConfig.DrawConsoleText(countText, _sidebarX + Padding, y, SmallFontSize, new Color(150, 150, 255, 255));
+                y += LineHeight;
+                GraphicsConfig.DrawConsoleText("│ [Arrows] or [Tab] to cycle", _sidebarX + Padding, y, SmallFontSize - 2, new Color(120, 120, 150, 255));
+                y += LineHeight + 5;
+            }
+
+            // Person details
+            GraphicsConfig.DrawConsoleText($"│ {person.FullName}", _sidebarX + Padding, y, SmallFontSize, new Color(255, 255, 100, 255));
+            y += LineHeight;
+            GraphicsConfig.DrawConsoleText($"│ Age: {person.Age} | {person.Gender}", _sidebarX + Padding, y, SmallFontSize, textColor);
+            y += LineHeight;
+            
+            if (person.Family != null)
+            {
+                GraphicsConfig.DrawConsoleText($"│ Family: {person.Family.FamilyName}", _sidebarX + Padding, y, SmallFontSize, textColor);
+                y += LineHeight;
+            }
+            
+            // Show current task/status
+            var taskText = GetPersonTaskText(person);
+            var taskColor = GetPersonTaskColor(person);
+            GraphicsConfig.DrawConsoleText($"│ Status: {taskText}", _sidebarX + Padding, y, SmallFontSize, taskColor);
+            y += LineHeight;
+            
+            GraphicsConfig.DrawConsoleText($"│ Energy: {person.Energy}/100", _sidebarX + Padding, y, SmallFontSize, textColor);
+            y += LineHeight;
+            GraphicsConfig.DrawConsoleText($"│ Hunger: {person.Hunger}/100", _sidebarX + Padding, y, SmallFontSize, textColor);
+            y += LineHeight;
+            
+            if (person.AssignedBuilding != null)
+            {
+                GraphicsConfig.DrawConsoleText($"│ Workplace: {person.AssignedBuilding.Type}", _sidebarX + Padding, y, SmallFontSize, new Color(150, 255, 150, 255));
+                y += LineHeight;
+            }
+            
+            if (person.HomeBuilding != null)
+            {
+                GraphicsConfig.DrawConsoleText($"│ Home: House at ({person.HomeBuilding.X}, {person.HomeBuilding.Y})", _sidebarX + Padding, y, SmallFontSize, new Color(255, 200, 150, 255));
+                y += LineHeight;
+            }
+            
+            y += 10;
+
+            // Commands
+            DrawSectionHeader("COMMANDS", y);
+            y += LineHeight + 5;
+            
+            GraphicsConfig.DrawConsoleText("│ [ESC  ] Back to Map", _sidebarX + Padding, y, SmallFontSize, new Color(150, 200, 255, 255));
+            y += LineHeight;
+            
+            if (selectionManager != null && selectionManager.HasMultiplePeople())
+            {
+                GraphicsConfig.DrawConsoleText("│ [Arrows] Cycle People", _sidebarX + Padding, y, SmallFontSize, new Color(150, 200, 255, 255));
+                y += LineHeight;
+            }
+            
+            GraphicsConfig.DrawConsoleText("│", _sidebarX + Padding, y, SmallFontSize, textColor);
+            y += LineHeight;
+            
+            // Show different message based on person's current job status
+            if (person.AssignedBuilding != null)
+            {
+                GraphicsConfig.DrawConsoleText("│ Click building to change job", _sidebarX + Padding, y, SmallFontSize, new Color(120, 120, 120, 255));
+            }
+            else
+            {
+                GraphicsConfig.DrawConsoleText("│ Click building to assign job", _sidebarX + Padding, y, SmallFontSize, new Color(120, 120, 120, 255));
+            }
+            y += LineHeight;
+
+            // Draw section separator
+            GraphicsConfig.DrawConsoleText("└" + new string('─', (_sidebarWidth - Padding * 2 - 8) / 8), 
+                _sidebarX + Padding, y, FontSize, new Color(100, 100, 120, 255));
+            y += LineHeight;
+
+            return y + 5;
+        }
+        
+        private string GetPersonTaskText(VillageBuilder.Engine.Entities.Person person)
+        {
+            return person.CurrentTask switch
+            {
+                VillageBuilder.Engine.Entities.PersonTask.Sleeping => "Sleeping",
+                VillageBuilder.Engine.Entities.PersonTask.GoingHome => "Going Home",
+                VillageBuilder.Engine.Entities.PersonTask.GoingToWork => "Going to Work",
+                VillageBuilder.Engine.Entities.PersonTask.WorkingAtBuilding => "Working",
+                VillageBuilder.Engine.Entities.PersonTask.Resting => "Resting",
+                VillageBuilder.Engine.Entities.PersonTask.MovingToLocation => "Traveling",
+                VillageBuilder.Engine.Entities.PersonTask.Idle => "Idle",
+                _ => "Unknown"
+            };
+        }
+        
+        private Color GetPersonTaskColor(VillageBuilder.Engine.Entities.Person person)
+        {
+            return person.CurrentTask switch
+            {
+                VillageBuilder.Engine.Entities.PersonTask.Sleeping => new Color(150, 150, 255, 255),
+                VillageBuilder.Engine.Entities.PersonTask.GoingHome => new Color(200, 200, 150, 255),
+                VillageBuilder.Engine.Entities.PersonTask.GoingToWork => new Color(200, 200, 150, 255),
+                VillageBuilder.Engine.Entities.PersonTask.WorkingAtBuilding => new Color(150, 255, 150, 255),
+                VillageBuilder.Engine.Entities.PersonTask.Resting => new Color(200, 200, 200, 255),
+                VillageBuilder.Engine.Entities.PersonTask.MovingToLocation => new Color(255, 200, 100, 255),
+                VillageBuilder.Engine.Entities.PersonTask.Idle => new Color(200, 200, 200, 255),
+                _ => Color.Gray
+            };
+        }
+        
+        private int RenderBuildingInfo(GameEngine engine, Building building, int startY)
+        {
+            var y = startY;
+            var textColor = new Color(200, 200, 200, 255);
+            var mousePos = Raylib.GetMousePosition();
+            bool mouseClicked = Raylib.IsMouseButtonPressed(MouseButton.Left);
+
+            DrawSectionHeader("BUILDING INFO", y);
+            y += LineHeight + 5;
+
+            // Building details
+            GraphicsConfig.DrawConsoleText($"│ {building.Name}", _sidebarX + Padding, y, SmallFontSize, new Color(255, 200, 100, 255));
+            y += LineHeight;
+            GraphicsConfig.DrawConsoleText($"│ Type: {building.Type}", _sidebarX + Padding, y, SmallFontSize, textColor);
+            y += LineHeight;
+            GraphicsConfig.DrawConsoleText($"│ Status: {(building.IsConstructed ? "Operational" : "Under Construction")}", 
+                _sidebarX + Padding, y, SmallFontSize, textColor);
+            y += LineHeight;
+            
+            y += 5;
+            
+            // Show workers or residents depending on building type
+            if (building.Type == BuildingType.House)
+            {
+                // Show residents for houses
+                GraphicsConfig.DrawConsoleText($"│ Residents: {building.Residents.Count}", _sidebarX + Padding, y, SmallFontSize, new Color(150, 255, 150, 255));
+                y += LineHeight;
+                
+                if (building.Residents.Count > 0)
+                {
+                    var residentsByFamily = building.Residents.Where(r => r.IsAlive).GroupBy(r => r.Family).Where(g => g.Key != null);
+                    foreach (var familyGroup in residentsByFamily)
+                    {
+                        var family = familyGroup.Key!;
+                        GraphicsConfig.DrawConsoleText($"│   • {family.FamilyName} ({familyGroup.Count()})", 
+                            _sidebarX + Padding + 10, y, SmallFontSize - 2, textColor);
+                        y += LineHeight;
+                    }
+                }
+            }
+            else
+            {
+                // Show workers for other buildings
+                GraphicsConfig.DrawConsoleText($"│ Workers: {building.Workers.Count}", _sidebarX + Padding, y, SmallFontSize, new Color(150, 255, 150, 255));
+                y += LineHeight;
+                
+                if (building.Workers.Count > 0)
+                {
+                    var workersByFamily = building.Workers.GroupBy(w => w.Family).Where(g => g.Key != null);
+                    foreach (var familyGroup in workersByFamily)
+                    {
+                        var family = familyGroup.Key!;
+                        GraphicsConfig.DrawConsoleText($"│   • {family.FamilyName} ({familyGroup.Count()})", 
+                            _sidebarX + Padding + 10, y, SmallFontSize - 2, textColor);
+                        y += LineHeight;
+                    }
+                }
+            }
+            
+            y += 10;
+
+            // Assign families section
+            bool isHouse = building.Type == BuildingType.House;
+            DrawSectionHeader(isHouse ? "ASSIGN RESIDENTS" : "ASSIGN WORKERS", y);
+            y += LineHeight + 5;
+            
+            // Show legend for work buildings
+            if (!isHouse)
+            {
+                GraphicsConfig.DrawConsoleText("│ Legend:", _sidebarX + Padding, y, SmallFontSize - 2, new Color(150, 150, 150, 255));
+                y += LineHeight - 2;
+                GraphicsConfig.DrawConsoleText("│ Green = Working here", _sidebarX + Padding + 10, y, SmallFontSize - 3, new Color(150, 255, 150, 255));
+                y += LineHeight - 3;
+                GraphicsConfig.DrawConsoleText("│ Yellow = Working elsewhere", _sidebarX + Padding + 10, y, SmallFontSize - 3, new Color(200, 200, 100, 255));
+                y += LineHeight - 3;
+                GraphicsConfig.DrawConsoleText("│ White = Available", _sidebarX + Padding + 10, y, SmallFontSize - 3, new Color(200, 200, 200, 255));
+                y += LineHeight;
+            }
+            
+            // Family assignment buttons
+            foreach (var family in engine.Families.Where(f => f.GetAdults().Any(p => p.IsAlive)))
+            {
+                var buttonX = _sidebarX + Padding;
+                var buttonY = y;
+                var buttonWidth = _sidebarWidth - Padding * 2;
+                var buttonHeight = LineHeight + 4;
+
+                bool isHovered = mousePos.X >= buttonX && mousePos.X <= buttonX + buttonWidth &&
+                                mousePos.Y >= buttonY && mousePos.Y <= buttonY + buttonHeight;
+
+                var familyWorkersHere = building.Workers.Count(w => w.Family?.Id == family.Id);
+                var isAssignedHere = familyWorkersHere > 0;
+                
+                // Check if family is working at another building
+                var workingAdults = family.GetAdults().Where(p => p.IsAlive && p.AssignedBuilding != null).ToList();
+                var workingElsewhere = workingAdults.Where(p => p.AssignedBuilding?.Id != building.Id).ToList();
+                var otherWorkplace = workingElsewhere.FirstOrDefault()?.AssignedBuilding;
+
+                // Draw button background
+                Color buttonColor;
+                if (isAssignedHere)
+                {
+                    buttonColor = new Color(40, 70, 40, 255); // Green - working here
+                }
+                else if (workingElsewhere.Any())
+                {
+                    buttonColor = new Color(60, 60, 30, 255); // Dark yellow - working elsewhere
+                }
+                else if (isHovered)
+                {
+                    buttonColor = new Color(60, 80, 120, 255); // Bright - hovering
+                }
+                else
+                {
+                    buttonColor = new Color(30, 40, 60, 255); // Dark - available
+                }
+                
+                Raylib.DrawRectangle(buttonX, buttonY, buttonWidth, buttonHeight, buttonColor);
+                
+                if (isHovered)
+                {
+                    Raylib.DrawRectangleLines(buttonX, buttonY, buttonWidth, buttonHeight, new Color(150, 200, 255, 255));
+                }
+
+                // Button text
+                var adultCount = family.GetAdults().Count(p => p.IsAlive);
+                var availableCount = family.GetAdults().Count(p => p.IsAlive && p.AssignedBuilding == null);
+                
+                string buttonText;
+                Color textColorToUse;
+                
+                if (isHouse)
+                {
+                    // House assignment logic
+                    var familyHomesHere = family.Members.Any(m => m.HomeBuilding?.Id == building.Id);
+                    buttonText = familyHomesHere ? 
+                        $"│ {family.FamilyName} (Living here)" : 
+                        $"│ {family.FamilyName} ({adultCount} adults)";
+                    textColorToUse = familyHomesHere ? new Color(150, 255, 150, 255) : textColor;
+                }
+                else
+                {
+                    // Work building assignment logic
+                    if (isAssignedHere)
+                    {
+                        buttonText = $"│ {family.FamilyName} ({familyWorkersHere} working here)";
+                        textColorToUse = new Color(150, 255, 150, 255);
+                    }
+                    else if (workingElsewhere.Any() && otherWorkplace != null)
+                    {
+                        buttonText = $"│ {family.FamilyName} (at {otherWorkplace.Type})";
+                        textColorToUse = new Color(200, 200, 100, 255); // Yellow text
+                    }
+                    else if (availableCount > 0)
+                    {
+                        buttonText = $"│ {family.FamilyName} ({availableCount} available)";
+                        textColorToUse = new Color(200, 200, 200, 255);
+                    }
+                    else
+                    {
+                        buttonText = $"│ {family.FamilyName} (no workers available)";
+                        textColorToUse = new Color(120, 120, 120, 255); // Grayed out
+                    }
+                }
+                
+                GraphicsConfig.DrawConsoleText(buttonText, buttonX + 5, buttonY + 3, SmallFontSize - 2, textColorToUse);
+
+                // Handle click
+                if (isHovered && mouseClicked)
+                {
+                    if (isHouse && !family.Members.Any(m => m.HomeBuilding?.Id == building.Id))
+                    {
+                        // Assign family to live in house - immediate execution
+                        Console.WriteLine($"[HOME] Assigning {family.FamilyName} family to live in house");
+                        var command = new VillageBuilder.Engine.Commands.FamilyCommands.AssignFamilyHomeCommand(
+                            0, engine.CurrentTick, family.Id, building.Id);
+                        engine.SubmitCommand(command);
+                    }
+                    else if (!isHouse && !isAssignedHere && availableCount > 0)
+                    {
+                        // Assign family to work at building - immediate execution
+                        Console.WriteLine($"[JOB] Assigning {family.FamilyName} family to work at {building.Type}");
+                        var command = new VillageBuilder.Engine.Commands.PersonCommands.AssignFamilyJobCommand(
+                            0, engine.CurrentTick, family.Id, building.Id);
+                        engine.SubmitCommand(command);
+                    }
+                }
+
+                y += buttonHeight + 3;
+            }
+            
+            y += 10;
+            
+            // Commands
+            DrawSectionHeader("COMMANDS", y);
+            y += LineHeight + 5;
+            
+            GraphicsConfig.DrawConsoleText("│ [ESC  ] Back to Map", _sidebarX + Padding, y, SmallFontSize, new Color(150, 200, 255, 255));
+            y += LineHeight;
+            
+            // Draw section separator
+            GraphicsConfig.DrawConsoleText("└" + new string('─', (_sidebarWidth - Padding * 2 - 8) / 8), 
+                _sidebarX + Padding, y, FontSize, new Color(100, 100, 120, 255));
+            y += LineHeight;
+
+            return y + 5;
         }
     }
 }
