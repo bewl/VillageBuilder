@@ -14,13 +14,13 @@ namespace VillageBuilder.Game.Graphics.UI
         private const int FontSize = GraphicsConfig.ConsoleFontSize; // Use config values
         private const int SmallFontSize = GraphicsConfig.SmallConsoleFontSize; // Use config values
 
-        public void Render(GameEngine engine, float timeScale, bool isPaused)
+        public void Render(GameEngine engine, float timeScale, bool isPaused, HeatMapRenderer? heatMapRenderer = null)
         {
             var barHeight = GraphicsConfig.StatusBarHeight;
-            
+
             // Draw background panel (dark terminal style)
             Raylib.DrawRectangle(0, 0, GraphicsConfig.ScreenWidth, barHeight, new Color(15, 15, 20, 255));
-            
+
             // Draw bottom border
             DrawHorizontalBorder(0, barHeight - 1, GraphicsConfig.ScreenWidth);
 
@@ -31,6 +31,12 @@ namespace VillageBuilder.Game.Graphics.UI
 
             // Row 2: Key Resources (adjusted spacing)
             RenderResources(engine, Padding, Padding + 26);
+
+            // Row 3: Heat Map Status (if active)
+            if (heatMapRenderer != null && heatMapRenderer.CurrentHeatMap != HeatMapType.None)
+            {
+                RenderHeatMapStatus(heatMapRenderer, Padding, Padding + 52);
+            }
         }
 
         private void DrawHorizontalBorder(int x, int y, int width)
@@ -115,6 +121,21 @@ namespace VillageBuilder.Game.Graphics.UI
             // Speed indicator
             var speedText = $"×{timeScale:F1}";
             GraphicsConfig.DrawConsoleText(speedText, x + 100, y, FontSize, new Color(255, 255, 100, 255));
+        }
+
+        private void RenderHeatMapStatus(HeatMapRenderer heatMapRenderer, int x, int y)
+        {
+            var heatMapName = heatMapRenderer.GetCurrentHeatMapName();
+            var statusColor = new Color(100, 200, 255, 255);
+            var iconColor = new Color(150, 220, 255, 255);
+
+            // Draw heat map icon and label
+            GraphicsConfig.DrawConsoleText("[◆]", x, y, FontSize, iconColor);
+            GraphicsConfig.DrawConsoleText($"Heat Map: {heatMapName}", x + 40, y, FontSize, statusColor);
+
+            // Draw hint
+            var hintColor = new Color(150, 150, 150, 255);
+            GraphicsConfig.DrawConsoleText("(Press V to toggle)", x + 250, y, SmallFontSize, hintColor);
         }
 
         private void RenderResources(GameEngine engine, int x, int y)

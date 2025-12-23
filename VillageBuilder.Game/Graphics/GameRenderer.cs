@@ -25,9 +25,10 @@ namespace VillageBuilder.Game.Graphics
         private readonly ParticleSystem _particleSystem;
         private readonly TooltipRenderer _tooltipRenderer;
         private readonly SelectionManager _selectionManager;
+        private readonly HeatMapRenderer _heatMapRenderer;
 
-        private float _cameraX = 50;
-        private float _cameraY = 50;
+        private float _cameraX;
+        private float _cameraY;
         private float _zoom = 1.0f;
         private bool _shouldQuit = false;
 
@@ -39,7 +40,7 @@ namespace VillageBuilder.Game.Graphics
         private int _hoveredTileY = -1; 
         private int _hoveredTileZ = -1;
         private bool _roadSnapEnabled = true;
-        
+
         // Entity hover/selection state
         private Person? _hoveredPerson = null;
         private Building? _hoveredBuilding = null;
@@ -47,7 +48,11 @@ namespace VillageBuilder.Game.Graphics
         public GameRenderer(GameEngine engine)
         {
             _engine = engine;
-            
+
+            // Initialize camera at the CENTER of the actual map
+            _cameraX = _engine.Grid.Width / 2f;
+            _cameraY = _engine.Grid.Height / 2f;
+
             _camera = new Camera2D
             {
                 Target = new Vector2(_cameraX * GraphicsConfig.TileSize, _cameraY * GraphicsConfig.TileSize),
@@ -62,6 +67,7 @@ namespace VillageBuilder.Game.Graphics
             _particleSystem = new ParticleSystem();
             _tooltipRenderer = new TooltipRenderer();
             _selectionManager = new SelectionManager();
+            _heatMapRenderer = new HeatMapRenderer();
         }
 
         public void Initialize()
@@ -110,6 +116,7 @@ namespace VillageBuilder.Game.Graphics
             if (Raylib.IsKeyPressed(KeyboardKey.L)) _selectedBuildingType = BuildingType.Lumberyard;
             if (Raylib.IsKeyPressed(KeyboardKey.M)) _selectedBuildingType = BuildingType.Mine;
             if (Raylib.IsKeyPressed(KeyboardKey.K)) _selectedBuildingType = BuildingType.Workshop;
+            if (Raylib.IsKeyPressed(KeyboardKey.E)) _selectedBuildingType = BuildingType.Well;
             if (Raylib.IsKeyPressed(KeyboardKey.T)) _selectedBuildingType = BuildingType.TownHall;
             
             // Rotation (R key or middle mouse button)
@@ -214,14 +221,28 @@ namespace VillageBuilder.Game.Graphics
                     }
                     else
                     {
-                        // Select entity - always check tile for people, not just hover
+                        // Select entity - check for families first
                         var clickedTile = _engine.Grid.GetTile((int)(_mouseWorldPos.X / GraphicsConfig.TileSize), 
                                                                (int)(_mouseWorldPos.Y / GraphicsConfig.TileSize));
-                        
+
                         if (clickedTile != null && clickedTile.PeopleOnTile.Count > 0)
                         {
-                            // Always select people on the tile, regardless of hover state
-                            _selectionManager.SelectPeopleAtTile(clickedTile.PeopleOnTile);
+                            // Find the family at this position (families always render together)
+                            // Select all members of that family
+                            var personAtTile = clickedTile.PeopleOnTile[0];
+                            var family = personAtTile.Family;
+
+                            if (family != null)
+                            {
+                                // Select entire family
+                                var familyMembers = family.Members.Where(m => m.IsAlive).ToList();
+                                _selectionManager.SelectPeopleAtTile(familyMembers);
+                            }
+                            else
+                            {
+                                // Fallback: select just this person
+                                _selectionManager.SelectPeopleAtTile(clickedTile.PeopleOnTile);
+                            }
                         }
                         else if (_hoveredBuilding != null)
                         {
@@ -240,7 +261,13 @@ namespace VillageBuilder.Game.Graphics
             if (Raylib.IsKeyPressed(KeyboardKey.Equal) || Raylib.IsKeyPressed(KeyboardKey.KpAdd)) timeScaleChange = 2.0f;
             if (Raylib.IsKeyPressed(KeyboardKey.Minus) || Raylib.IsKeyPressed(KeyboardKey.KpSubtract)) timeScaleChange = 0.5f;
             if (Raylib.IsKeyPressed(KeyboardKey.Zero) || Raylib.IsKeyPressed(KeyboardKey.Kp0)) timeScaleChange = 0.0f; // Reset to 1x (special handling needed)
-            
+
+            // Heat map toggle with V key
+            if (Raylib.IsKeyPressed(KeyboardKey.V))
+            {
+                _heatMapRenderer.CycleHeatMap();
+            }
+
             // Quit game with Q key
             if (Raylib.IsKeyPressed(KeyboardKey.Q))
             {
@@ -369,10 +396,13 @@ namespace VillageBuilder.Game.Graphics
 
             // Render everything in world space first
             Raylib.BeginMode2D(_camera);
-            
+
             // Render the map (tiles, buildings, lighting - all handled by MapRenderer)
             _mapRenderer.Render(_engine, _camera, _selectionManager);
-            
+
+            // Render heat map overlay (after map, before UI elements)
+            _heatMapRenderer.Render(_engine, _camera);
+
             // Draw particles (also in world space)
             _particleSystem.Render();
             
@@ -389,7 +419,7 @@ namespace VillageBuilder.Game.Graphics
             Raylib.EndMode2D();
 
             // Render UI (screen space - no camera)
-            _statusBar.Render(_engine, timeScale, isPaused);
+            _statusBar.Render(_engine, timeScale, isPaused, _heatMapRenderer);
             _sidebar.Render(_engine, _selectionManager); // Pass selection manager to sidebar
 
             // Draw building placement UI
@@ -414,6 +444,13 @@ namespace VillageBuilder.Game.Graphics
                 debugY + 20, 
                 14, 
                 new Color((byte)200, (byte)200, (byte)200, (byte)255)
+            );
+            GraphicsConfig.DrawConsoleText(
+                $"Map: {_engine.Grid.Width}x{_engine.Grid.Height} tiles", 
+                GraphicsConfig.ScreenWidth - 350, 
+                debugY + 40, 
+                14, 
+                new Color((byte)150, (byte)200, (byte)255, (byte)255)
             );
 
             Raylib.EndDrawing();
@@ -644,22 +681,28 @@ namespace VillageBuilder.Game.Graphics
         {
             _hoveredPerson = null;
             _hoveredBuilding = null;
-            
+
             // Get mouse position in world space
             var mouseScreenPos = Raylib.GetMousePosition();
             var mouseWorldPos = Raylib.GetScreenToWorld2D(mouseScreenPos, _camera);
-            
+
             int worldTileX = (int)(mouseWorldPos.X / GraphicsConfig.TileSize);
             int worldTileY = (int)(mouseWorldPos.Y / GraphicsConfig.TileSize);
-            
+
             // Check for person hover
             var tile = _engine.Grid.GetTile(worldTileX, worldTileY);
             if (tile != null && tile.PeopleOnTile.Count > 0)
             {
-                _hoveredPerson = tile.PeopleOnTile[0];
+                // Only set hover for single person tiles to avoid flicker
+                // Multi-person tiles will be handled properly on click
+                if (tile.PeopleOnTile.Count == 1)
+                {
+                    _hoveredPerson = tile.PeopleOnTile[0];
+                }
+                // For multiple people, don't set hover - let click handle it
                 return;
             }
-            
+
             // Check for building hover
             if (tile?.Building != null)
             {

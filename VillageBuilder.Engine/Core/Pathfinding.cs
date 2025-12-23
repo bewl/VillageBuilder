@@ -21,14 +21,14 @@ namespace VillageBuilder.Engine.Core
         {
             var openSet = new List<PathNode>();
             var closedSet = new HashSet<Vector2Int>();
-            
+
             var startNode = new PathNode
             {
                 Position = start,
                 GCost = 0,
                 HCost = GetDistance(start, end)
             };
-            
+
             openSet.Add(startNode);
             
             while (openSet.Count > 0)
@@ -50,11 +50,11 @@ namespace VillageBuilder.Engine.Core
                 {
                     if (closedSet.Contains(neighbor))
                         continue;
-                    
+
                     var tile = grid.GetTile(neighbor.X, neighbor.Y);
                     if (tile == null || !tile.IsWalkable)
                         continue;
-                    
+
                     float tentativeGCost = currentNode.GCost + GetDistance(currentNode.Position, neighbor);
                     
                     var neighborNode = openSet.FirstOrDefault(n => n.Position.X == neighbor.X && n.Position.Y == neighbor.Y);

@@ -216,6 +216,16 @@ namespace VillageBuilder.Engine.Core
             // Process buildings every tick (not just hourly)
             if (Weather.IsWorkable())
             {
+                // Auto-assign idle families to construction (once per hour to avoid spam)
+                if (hourPassed)
+                {
+                    AutoAssignConstructionWorkers();
+                }
+
+                // Process construction on unfinished buildings
+                ProcessConstruction();
+
+                // Process production on constructed buildings
                 foreach (var building in Buildings.Where(b => b.IsConstructed))
                 {
                     building.Work(Time.CurrentSeason);
@@ -327,10 +337,105 @@ namespace VillageBuilder.Engine.Core
                         "Firewood supplies are dwindling in the cold winter!", 
                         LogLevel.Warning);
                 }
+                }
             }
-        }
-        
-        private void TransferBuildingProduction()
+
+            /// <summary>
+            /// Process construction work on unfinished buildings
+            /// </summary>
+            private void ProcessConstruction()
+            {
+                var buildingsUnderConstruction = Buildings.Where(b => !b.IsConstructed).ToList();
+
+                foreach (var building in buildingsUnderConstruction)
+                {
+                    // Only count workers who are alive AND physically present at the construction site
+                    int workDone = building.ConstructionWorkers.Count(w => w.IsAlive && w.IsAtConstructionSite(building));
+
+                    if (workDone > 0)
+                    {
+                        building.ConstructionProgress += workDone;
+
+                        // Check if construction is complete
+                        if (building.ConstructionProgress >= building.ConstructionWorkRequired)
+                        {
+                            CompleteConstruction(building);
+                        }
+                    }
+                }
+            }
+
+            /// <summary>
+            /// Complete construction of a building
+            /// </summary>
+            private void CompleteConstruction(Building building)
+            {
+                building.IsConstructed = true;
+                building.ConstructionProgress = building.ConstructionWorkRequired;
+
+                // Release construction workers
+                foreach (var worker in building.ConstructionWorkers.ToList())
+                {
+                    worker.CurrentTask = PersonTask.Idle;
+                }
+                building.ConstructionWorkers.Clear();
+
+                // Log completion
+                EventLog.Instance.AddMessage(
+                    $"Construction complete: a new {building.Type} is now operational",
+                    LogLevel.Success);
+
+                // Auto-assign house to a homeless family
+                if (building.Type == BuildingType.House)
+                {
+                    AutoAssignHouseToFamily(building);
+                }
+
+                // Check if there are more buildings that need workers (freed workers can move to next project)
+                AutoAssignConstructionWorkers();
+            }
+
+            /// <summary>
+            /// Automatically assign a newly constructed house to a homeless family
+            /// </summary>
+            private void AutoAssignHouseToFamily(Building house)
+            {
+                // Find families without a home
+                var homelessFamily = Families
+                    .FirstOrDefault(f => f.Members.Any(m => m.IsAlive && m.HomeBuilding == null));
+
+                if (homelessFamily == null)
+                    return; // No homeless families
+
+                // Assign all family members to this house
+                foreach (var member in homelessFamily.Members.Where(m => m.IsAlive))
+                {
+                    member.HomeBuilding = house;
+
+                    // Add to building residents if not already there
+                    if (!house.Residents.Contains(member))
+                    {
+                        house.Residents.Add(member);
+                    }
+                }
+
+                // Update family home position to the house
+                var doorPositions = house.GetDoorPositions();
+                if (doorPositions.Count > 0)
+                {
+                    homelessFamily.HomePosition = doorPositions[0];
+                }
+                else
+                {
+                    homelessFamily.HomePosition = new Vector2Int(house.X, house.Y);
+                }
+
+                EventLog.Instance.AddMessage(
+                    $"The {homelessFamily.FamilyName} family has moved into their new home",
+                    LogLevel.Success);
+            }
+
+            private void TransferBuildingProduction()
         {
             foreach (var building in Buildings.Where(b => b.IsConstructed))
             {
@@ -361,6 +466,96 @@ namespace VillageBuilder.Engine.Core
         public void SubmitCommand(ICommand command)
         {
             CommandQueue.EnqueueCommand(command);
+        }
+
+        /// <summary>
+        /// Trigger automatic construction worker assignment (public for manual triggering)
+        /// </summary>
+        public void TriggerAutoConstructionAssignment()
+        {
+            AutoAssignConstructionWorkers();
+        }
+
+        /// <summary>
+        /// Automatically assign idle families to buildings under construction
+        /// </summary>
+        private void AutoAssignConstructionWorkers()
+        {
+            // Get all buildings that need construction and don't have workers
+            var buildingsNeedingWorkers = Buildings
+                .Where(b => !b.IsConstructed && b.ConstructionWorkers.Count == 0)
+                .OrderBy(b => b.Id) // Oldest buildings first
+                .ToList();
+
+            if (buildingsNeedingWorkers.Count == 0)
+                return;
+
+            // Get all families with idle adults
+            var idleFamilies = Families
+                .Where(f => f.GetIdleMembers().Any(p => p.Age >= 18))
+                .ToList();
+
+            if (idleFamilies.Count == 0)
+                return;
+
+            // Distribute families across buildings (round-robin)
+            int buildingIndex = 0;
+            foreach (var family in idleFamilies)
+            {
+                if (buildingIndex >= buildingsNeedingWorkers.Count)
+                    break;
+
+                var building = buildingsNeedingWorkers[buildingIndex];
+                var idleAdults = family.GetIdleMembers().Where(p => p.Age >= 18).ToList();
+
+                if (idleAdults.Count == 0)
+                    continue;
+
+                // Get door positions or building perimeter for construction work
+                var workPositions = building.GetDoorPositions();
+                if (workPositions.Count == 0)
+                {
+                    workPositions.Add(new Vector2Int(building.X, building.Y));
+                }
+
+                // Assign each idle adult to construction
+                int assignedCount = 0;
+                foreach (var person in idleAdults)
+                {
+                    // Find least crowded work position
+                    var targetPosition = workPositions
+                        .OrderBy(p => Grid.GetTile(p.X, p.Y)?.PeopleOnTile.Count ?? 0)
+                        .ThenBy(p => Math.Abs(p.X - person.Position.X) + Math.Abs(p.Y - person.Position.Y))
+                        .First();
+
+                    // Calculate path to work site
+                    var path = Pathfinding.FindPath(person.Position, targetPosition, Grid);
+
+                    if (path != null && path.Count > 0)
+                    {
+                        person.SetPath(path);
+                        person.CurrentTask = PersonTask.Constructing;
+
+                        // Add to building's construction workers
+                        if (!building.ConstructionWorkers.Contains(person))
+                        {
+                            building.ConstructionWorkers.Add(person);
+                        }
+
+                        assignedCount++;
+                    }
+                }
+
+                if (assignedCount > 0)
+                {
+                    EventLog.Instance.AddMessage(
+                        $"The {family.FamilyName} family ({assignedCount} workers) automatically assigned to construct the {building.Type}",
+                        LogLevel.Info);
+
+                    // Move to next building for next family (round-robin distribution)
+                    buildingIndex++;
+                }
+            }
         }
 
         /// <summary>

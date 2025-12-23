@@ -79,26 +79,55 @@ namespace VillageBuilder.Engine.Commands.PersonCommands
             
             // Assign each working adult
             int assignedCount = 0;
+            var usedPositions = new HashSet<Vector2Int>(); // Track which positions we've assigned
+
             foreach (var person in workingMembers)
             {
-                // Find closest interior position for this person
-                var targetPosition = interiorPositions.OrderBy(p => 
-                    Math.Abs(p.X - person.Position.X) + Math.Abs(p.Y - person.Position.Y)
-                ).FirstOrDefault();
+                Vector2Int? targetPosition = null;
 
-                if (targetPosition.X == 0 && targetPosition.Y == 0 && interiorPositions.Count > 0)
+                // Try to find an unoccupied position that hasn't been assigned yet
+                var allPositions = building.GetInteriorPositions();
+                if (allPositions.Count == 0)
                 {
-                    targetPosition = interiorPositions[0];
+                    allPositions = building.GetDoorPositions();
                 }
-                
-                // Calculate path directly to interior position
-                // The pathfinding will handle going through the door
-                var path = Pathfinding.FindPath(person.Position, targetPosition, engine.Grid);
+
+                // Filter out already-used positions
+                var availablePositions = allPositions.Where(p => !usedPositions.Contains(p)).ToList();
+
+                if (availablePositions.Count > 0)
+                {
+                    // From available positions, prefer empty tiles
+                    targetPosition = availablePositions
+                        .OrderBy(p => engine.Grid.GetTile(p.X, p.Y)?.PeopleOnTile.Count ?? 0)
+                        .ThenBy(p => Math.Abs(p.X - person.Position.X) + Math.Abs(p.Y - person.Position.Y))
+                        .FirstOrDefault();
+                }
+                else if (allPositions.Count > 0)
+                {
+                    // All positions used, find least crowded
+                    targetPosition = allPositions
+                        .OrderBy(p => engine.Grid.GetTile(p.X, p.Y)?.PeopleOnTile.Count ?? 0)
+                        .ThenBy(p => Math.Abs(p.X - person.Position.X) + Math.Abs(p.Y - person.Position.Y))
+                        .FirstOrDefault();
+                }
+
+                if (targetPosition == null)
+                {
+                    Console.WriteLine($"[JOB] No valid position found for {person.FirstName}");
+                    continue;
+                }
+
+                // Mark this position as used
+                usedPositions.Add(targetPosition.Value);
+
+                // Calculate path to unoccupied position
+                var path = Pathfinding.FindPath(person.Position, targetPosition.Value, engine.Grid);
 
                 if (path != null && path.Count > 0)
                 {
-                    Console.WriteLine($"[JOB] {person.FirstName} pathfinding: {path.Count} steps from ({person.Position.X},{person.Position.Y}) to interior at ({targetPosition.X},{targetPosition.Y})");
-                    
+                    Console.WriteLine($"[JOB] {person.FirstName} pathfinding: {path.Count} steps to position at ({targetPosition.Value.X},{targetPosition.Value.Y})");
+
                     // Set path and assign job (without logging for each person)
                     person.SetPath(path);
                     person.AssignToBuilding(building, logEvent: false);
@@ -106,7 +135,7 @@ namespace VillageBuilder.Engine.Commands.PersonCommands
                 }
                 else
                 {
-                    Console.WriteLine($"[JOB] No path found for {person.FirstName} to interior at ({targetPosition.X},{targetPosition.Y})");
+                    Console.WriteLine($"[JOB] No path found for {person.FirstName} to position at ({targetPosition.Value.X},{targetPosition.Value.Y})");
                 }
             }
 

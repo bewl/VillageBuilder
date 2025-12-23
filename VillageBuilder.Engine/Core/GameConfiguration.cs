@@ -10,12 +10,12 @@ namespace VillageBuilder.Engine.Core
         /// <summary>
         /// Width of the game map in tiles
         /// </summary>
-        public int MapWidth { get; set; } = 100;
+        public int MapWidth { get; set; } = 256;
 
         /// <summary>
         /// Height of the game map in tiles
         /// </summary>
-        public int MapHeight { get; set; } = 100;
+        public int MapHeight { get; set; } = 256;
 
         /// <summary>
         /// Target simulation ticks per second

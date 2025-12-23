@@ -69,25 +69,28 @@ namespace VillageBuilder.Engine.Commands.BuildingCommands
                     return CommandResult.InsufficientResources($"Not enough {cost.Key}");
             }
 
-            // Place building - mark all occupied tiles
-            building.IsConstructed = true;
-            
-            // Log construction as a narrative event
+            // Place building - mark all occupied tiles BUT leave IsConstructed = false
+            // Building will need construction workers to complete
+            building.IsConstructed = false;
+            building.ConstructionProgress = 0;
+
+            // Log construction started (workers will be auto-assigned if available)
             EventLog.Instance.AddMessage(
-                $"Construction complete: a new {building.Type} is now operational", 
-                LogLevel.Success);
-            
+                $"Construction started: {building.Type} (idle families will be automatically assigned)", 
+                LogLevel.Info);
+
             // DEBUG: Log building placement details
-            Console.WriteLine($"\n=== BUILDING PLACED ===");
+            Console.WriteLine($"\n=== BUILDING PLACED (UNDER CONSTRUCTION) ===");
             Console.WriteLine($"Type: {BuildingType}, Position: ({X}, {Y}), Rotation: {Rotation}");
             Console.WriteLine($"Definition: Width={building.Definition.Width}, Height={building.Definition.Height}");
             Console.WriteLine($"Occupied tiles: {occupiedTiles.Count}");
-            
+            Console.WriteLine($"Construction work required: {building.ConstructionWorkRequired}");
+
             // Show all corner tiles with their layout positions
             Console.WriteLine($"\nCorner tiles (world position -> layout position -> glyph):");
             var rotatedDims = building.Definition.GetRotatedDimensions(Rotation);
             Console.WriteLine($"Rotated dimensions: {rotatedDims.width}x{rotatedDims.height}");
-            
+
             // Get the first and last few tiles to see corners
             var tilesToCheck = new[] { 
                 occupiedTiles[0], 
@@ -95,7 +98,7 @@ namespace VillageBuilder.Engine.Commands.BuildingCommands
                 occupiedTiles[Math.Min(rotatedDims.width - 1, occupiedTiles.Count - 1)],
                 occupiedTiles[Math.Min(occupiedTiles.Count - rotatedDims.width, occupiedTiles.Count - 1)]
             }.Distinct();
-            
+
             foreach (var tilePos in tilesToCheck)
             {
                 var buildingTile = building.GetTileAtWorldPosition(tilePos.X, tilePos.Y);
@@ -104,7 +107,7 @@ namespace VillageBuilder.Engine.Commands.BuildingCommands
                 Console.WriteLine($"  World({tilePos.X},{tilePos.Y}) Local({localX},{localY}): {(buildingTile.HasValue ? $"{buildingTile.Value.Type} '{buildingTile.Value.Glyph}'" : "NULL")}");
             }
             Console.WriteLine($"======================\n");
-            
+
             foreach (var tilePos in occupiedTiles)
             {
                 var tile = engine.Grid.GetTile(tilePos.X, tilePos.Y);
@@ -113,64 +116,22 @@ namespace VillageBuilder.Engine.Commands.BuildingCommands
                     tile.Building = building; // IsWalkable will automatically become false
                 }
             }
-            
+
             engine.Buildings.Add(building);
-            
-            // Auto-assign house to a homeless family
-            if (BuildingType == BuildingType.House)
-            {
-                AutoAssignHouseToFamily(engine, building);
-            }
+
+            // Trigger automatic construction worker assignment for this new building
+            engine.TriggerAutoConstructionAssignment();
 
             return CommandResult.Success(
-                $"Constructed {BuildingType} at ({X}, {Y}) with rotation {Rotation}",
+                $"Started construction of {BuildingType} at ({X}, {Y}) with rotation {Rotation}",
                 new Dictionary<string, object>
                 {
                     { "BuildingType", BuildingType },
                     { "Position", new { X, Y } },
-                    { "Rotation", Rotation }
+                    { "Rotation", Rotation },
+                    { "ConstructionWorkRequired", building.ConstructionWorkRequired }
                 }
             );
-        }
-        
-        /// <summary>
-        /// Automatically assign a newly constructed house to a homeless family
-        /// </summary>
-        private void AutoAssignHouseToFamily(GameEngine engine, Building house)
-        {
-            // Find families without a home
-            var homelessFamily = engine.Families
-                .FirstOrDefault(f => f.Members.Any(m => m.IsAlive && m.HomeBuilding == null));
-            
-            if (homelessFamily == null)
-                return; // No homeless families
-            
-            // Assign all family members to this house
-            foreach (var member in homelessFamily.Members.Where(m => m.IsAlive))
-            {
-                member.HomeBuilding = house;
-                
-                // Add to building residents if not already there
-                if (!house.Residents.Contains(member))
-                {
-                    house.Residents.Add(member);
-                }
-            }
-            
-            // Update family home position to the house
-            var doorPositions = house.GetDoorPositions();
-            if (doorPositions.Count > 0)
-            {
-                homelessFamily.HomePosition = doorPositions[0];
-            }
-            else
-            {
-                homelessFamily.HomePosition = new Vector2Int(house.X, house.Y);
-            }
-            
-            EventLog.Instance.AddMessage(
-                $"The {homelessFamily.FamilyName} family has moved into their new home",
-                LogLevel.Success);
         }
     }
 }

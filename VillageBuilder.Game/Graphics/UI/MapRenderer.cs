@@ -90,11 +90,18 @@ namespace VillageBuilder.Game.Graphics.UI
 
         private void DrawDetailedBuilding(Building building, int tileSize, GameTime time)
         {
+            // If building is under construction, draw construction stages
+            if (!building.IsConstructed)
+            {
+                DrawConstructionStages(building, tileSize);
+                return;
+            }
+
             var bgColor = GetBuildingBackgroundColor(building.Type);
             var wallColor = GetWallColor(building.Type);
             var floorColor = GetFloorColor(building.Type);
             var doorColor = new Color(120, 80, 40, 255);
-            
+
             // Check if building should show lights at night
             bool showLights = building.ShouldShowLights(time);
             float darknessFactor = time.GetDarknessFactor();
@@ -105,7 +112,7 @@ namespace VillageBuilder.Game.Graphics.UI
             {
                 var buildingTile = building.GetTileAtWorldPosition(tilePos.X, tilePos.Y);
                 if (buildingTile == null) continue;
-                
+
                 var pos = new Vector2(tilePos.X * tileSize, tilePos.Y * tileSize);
 
                 Color tileColor = buildingTile.Value.Type switch
@@ -115,13 +122,13 @@ namespace VillageBuilder.Game.Graphics.UI
                     BuildingTileType.Door => doorColor,
                     _ => bgColor
                 };
-                
+
                 // Apply darkness overlay
                 if (darknessFactor > 0)
                 {
                     tileColor = DarkenColor(tileColor, darknessFactor);
                 }
-                
+
                 // Add warm glow if lights are on
                 if (showLights && buildingTile.Value.Type == BuildingTileType.Floor)
                 {
@@ -142,7 +149,7 @@ namespace VillageBuilder.Game.Graphics.UI
                         BuildingTileType.Door => new Color(255, 255, 0, 255),
                         _ => Color.White
                     };
-                    
+
                     // Apply darkness to glyphs too
                     if (darknessFactor > 0 && !showLights)
                     {
@@ -160,16 +167,73 @@ namespace VillageBuilder.Game.Graphics.UI
                     GraphicsConfig.DrawConsoleText(displayChar, textX, textY, FontSize, glyphColor);
                 }
             }
+        }
 
-            // Construction indicator (if any)
-            if (!building.IsConstructed)
+        /// <summary>
+        /// Draw construction stages for buildings under construction
+        /// </summary>
+        private void DrawConstructionStages(Building building, int tileSize)
+        {
+            var stage = building.GetConstructionStage();
+            var occupiedTiles = building.GetOccupiedTiles();
+            var progressPercent = building.GetConstructionProgressPercent();
+
+            // Colors for each construction stage
+            Color stageColor = stage switch
             {
-                foreach (var tilePos in occupiedTiles)
+                ConstructionStage.Foundation => new Color(101, 67, 33, 255),   // Dark brown
+                ConstructionStage.Framing => new Color(139, 90, 43, 255),      // Medium brown
+                ConstructionStage.Walls => new Color(160, 120, 80, 255),       // Light brown
+                ConstructionStage.Finishing => new Color(180, 140, 100, 255),  // Almost complete
+                _ => new Color(100, 100, 100, 255)
+            };
+
+            // Glyphs for each stage
+            string stageGlyph = stage switch
+            {
+                ConstructionStage.Foundation => "░",    // Light shade
+                ConstructionStage.Framing => "▒",       // Medium shade
+                ConstructionStage.Walls => "▓",         // Dark shade
+                ConstructionStage.Finishing => "█",     // Full block
+                _ => "·"
+            };
+
+            foreach (var tilePos in occupiedTiles)
+            {
+                var pos = new Vector2(tilePos.X * tileSize, tilePos.Y * tileSize);
+
+                // Draw background
+                Raylib.DrawRectangle((int)pos.X, (int)pos.Y, tileSize, tileSize, stageColor);
+
+                // Draw stage glyph
+                int textX = (int)pos.X + (tileSize - FontSize) / 2;
+                int textY = (int)pos.Y + (tileSize - FontSize) / 2;
+
+                Color glyphColor = new Color(200, 200, 200, 255);
+                GraphicsConfig.DrawConsoleText(stageGlyph, textX, textY, FontSize, glyphColor);
+            }
+
+            // Draw progress indicator on center tile
+            if (occupiedTiles.Count > 0)
+            {
+                var centerTile = occupiedTiles[occupiedTiles.Count / 2];
+                var centerPos = new Vector2(centerTile.X * tileSize, centerTile.Y * tileSize);
+
+                // Draw progress percentage
+                string progressText = $"{progressPercent}%";
+                int progressX = (int)centerPos.X + (tileSize - progressText.Length * 8) / 2;
+                int progressY = (int)centerPos.Y + tileSize - 18;
+
+                GraphicsConfig.DrawConsoleText(progressText, progressX, progressY, 14, new Color(255, 255, 100, 255));
+
+                // Draw worker count
+                int workerCount = building.ConstructionWorkers.Count;
+                if (workerCount > 0)
                 {
-                    var pos = new Vector2(tilePos.X * tileSize, tilePos.Y * tileSize);
-                    int textX = (int)pos.X + (tileSize - FontSize) / 2;
-                    int textY = (int)pos.Y + (tileSize - FontSize) / 2;
-                    GraphicsConfig.DrawConsoleText("?", textX, textY, FontSize, new Color(255, 255, 100, 255));
+                    string workerText = $"👷{workerCount}";
+                    int workerX = (int)centerPos.X + 4;
+                    int workerY = (int)centerPos.Y + 4;
+                    GraphicsConfig.DrawConsoleText(workerText, workerX, workerY, 12, new Color(255, 200, 100, 255));
                 }
             }
         }
@@ -300,80 +364,83 @@ namespace VillageBuilder.Game.Graphics.UI
         
         private void RenderPeople(GameEngine engine, int tileSize, int minX, int maxX, int minY, int maxY, VillageBuilder.Game.Core.SelectionManager? selectionManager)
         {
-            // Group people by position to handle multiple people per tile
-            var peopleByPosition = engine.Families
-                .SelectMany(f => f.Members)
-                .Where(p => p.IsAlive)
-                .GroupBy(p => new { p.Position.X, p.Position.Y });
-            
-            foreach (var group in peopleByPosition)
+            // Group people by FAMILY - families always render together as a stack
+            foreach (var family in engine.Families)
             {
-                int posX = group.Key.X;
-                int posY = group.Key.Y;
-                
+                var aliveMembers = family.Members.Where(p => p.IsAlive).ToList();
+                if (aliveMembers.Count == 0)
+                    continue;
+
+                // Use first alive member's position as the family's visual position
+                // (internally they may have different positions, but we render them stacked)
+                var displayPerson = aliveMembers[0];
+                int posX = displayPerson.Position.X;
+                int posY = displayPerson.Position.Y;
+
                 // Only render if in visible area
                 if (posX < minX || posX >= maxX || posY < minY || posY >= maxY)
                     continue;
-                
+
                 var pos = new Vector2(posX * tileSize, posY * tileSize);
-                var peopleAtTile = group.ToList();
-                var displayPerson = peopleAtTile[0]; // Show first person's details
-                
-                // Draw path for first person if moving
-                if (displayPerson.CurrentPath != null && displayPerson.CurrentPath.Count > 0 && displayPerson.CurrentTask == VillageBuilder.Engine.Entities.PersonTask.MovingToLocation)
+
+                // Draw path for family if moving
+                if (displayPerson.CurrentPath != null && displayPerson.CurrentPath.Count > 0 && 
+                    displayPerson.CurrentTask == VillageBuilder.Engine.Entities.PersonTask.MovingToLocation)
                 {
                     for (int i = displayPerson.PathIndex; i < displayPerson.CurrentPath.Count - 1; i++)
                     {
                         var pathStart = displayPerson.CurrentPath[i];
                         var pathEnd = displayPerson.CurrentPath[i + 1];
-                        
+
                         var startPos = new Vector2(pathStart.X * tileSize + tileSize / 2, pathStart.Y * tileSize + tileSize / 2);
                         var endPos = new Vector2(pathEnd.X * tileSize + tileSize / 2, pathEnd.Y * tileSize + tileSize / 2);
-                        
+
                         Raylib.DrawLine((int)startPos.X, (int)startPos.Y, (int)endPos.X, (int)endPos.Y, new Color(255, 255, 0, 100));
                     }
                 }
-                
-                // Draw person background
+
+                // Draw family background (use gender color of head of household)
                 var bgColor = displayPerson.Gender == VillageBuilder.Engine.Entities.Gender.Male 
                     ? new Color(80, 120, 200, 220)
                     : new Color(200, 80, 120, 220);
-                
+
                 Raylib.DrawRectangle((int)pos.X, (int)pos.Y, tileSize, tileSize, bgColor);
-                
-                // Draw selection indicator
-                if (selectionManager?.SelectedPerson == displayPerson)
+
+                // Draw selection indicator if any family member is selected
+                bool familySelected = aliveMembers.Any(p => selectionManager?.SelectedPerson == p);
+                if (familySelected)
                 {
                     Raylib.DrawRectangleLines((int)pos.X, (int)pos.Y, tileSize, tileSize, new Color(255, 255, 0, 255));
                     Raylib.DrawRectangleLines((int)pos.X + 1, (int)pos.Y + 1, tileSize - 2, tileSize - 2, new Color(255, 255, 0, 255));
                 }
-                
-                // Draw universal person symbol
-                string glyph = "☺";
+
+                // Draw family symbol (multiple people icon)
+                string glyph = aliveMembers.Count > 1 ? "☻" : "☺"; // Filled circle for families, regular for singles
                 var glyphColor = new Color(255, 255, 255, 255);
-                
+
                 int textX = (int)pos.X + (tileSize - FontSize) / 2;
                 int textY = (int)pos.Y + (tileSize - FontSize) / 2;
-                
+
                 GraphicsConfig.DrawConsoleText(glyph, textX, textY, FontSize, glyphColor);
-                
-                // Draw count if multiple people on this tile
-                if (peopleAtTile.Count > 1)
-                {
-                    var countText = peopleAtTile.Count.ToString();
-                    var countColor = new Color(255, 255, 0, 255);
-                    Raylib.DrawCircle((int)pos.X + tileSize - 8, (int)pos.Y + 8, 8, new Color(200, 0, 0, 220));
-                    GraphicsConfig.DrawConsoleText(countText, (int)pos.X + tileSize - 12, (int)pos.Y + 2, 14, countColor);
+
+                        // Always draw family count badge
+                        if (aliveMembers.Count > 1)
+                        {
+                            var countText = aliveMembers.Count.ToString();
+                            var countColor = new Color(255, 255, 0, 255);
+                            Raylib.DrawCircle((int)pos.X + tileSize - 8, (int)pos.Y + 8, 8, new Color(100, 50, 150, 220));
+                            GraphicsConfig.DrawConsoleText(countText, (int)pos.X + tileSize - 12, (int)pos.Y + 2, 14, countColor);
+                        }
+
+                        // Draw task indicator if any family member is working
+                        bool anyWorking = aliveMembers.Any(p => p.AssignedBuilding != null);
+                        if (anyWorking)
+                        {
+                            var taskColor = new Color(255, 255, 0, 255);
+                            Raylib.DrawRectangle((int)pos.X, (int)pos.Y, 3, 3, taskColor);
+                        }
+                    }
                 }
-                
-                // Draw task indicator if working
-                if (displayPerson.AssignedBuilding != null)
-                {
-                    var taskColor = new Color(255, 255, 0, 255);
-                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, 3, 3, taskColor);
-                }
-            }
-        }
         
         private void DrawBuildingSelection(Building building, int tileSize)
         {

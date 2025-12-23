@@ -19,6 +19,7 @@ namespace VillageBuilder.Engine.Entities
         MovingToLocation,
         Resting,
         Sleeping,
+        Eating,
         GoingHome,
         GoingToWork
     }
@@ -51,8 +52,11 @@ namespace VillageBuilder.Engine.Entities
         // Stats
         public int Energy { get; set; } // 0-100
         public int Hunger { get; set; } // 0-100 (higher = more hungry)
+        public int Health { get; set; } // 0-100
         public bool IsAlive { get; set; }
         public bool IsSleeping { get; set; } // Track if person is currently sleeping
+        public bool IsSick { get; set; }
+        public int DaysSick { get; private set; }
         public Building? HomeBuilding { get; set; } // The house this person lives in
         
         public Person(int id, string firstName, string lastName, int age, Gender gender)
@@ -67,6 +71,9 @@ namespace VillageBuilder.Engine.Entities
             IsAlive = true;
             Energy = 100;
             Hunger = 0;
+            Health = 100;
+            IsSick = false;
+            DaysSick = 0;
             CurrentTask = PersonTask.Idle;
         }
 
@@ -186,20 +193,50 @@ namespace VillageBuilder.Engine.Entities
             var targetTile = grid.GetTile(target.X, target.Y);
             if (targetTile != null)
             {
-                // Only avoid stacking if there's more than one person already there
-                // AND we're not at the final destination
+                // Check if tile is occupied by someone else
+                bool tileOccupied = targetTile.PeopleOnTile.Count > 0 && 
+                                   !targetTile.PeopleOnTile.Contains(this);
+
+                // Check if we're at the final destination
                 bool isDestination = PathIndex == CurrentPath.Count - 1;
-                bool tileOccupied = targetTile.PeopleOnTile.Count > 0 && !targetTile.PeopleOnTile.Contains(this);
-                
-                if (tileOccupied && !isDestination)
+
+                if (tileOccupied)
                 {
-                    // Wait this tick - don't move if tile is occupied (unless it's our destination)
-                    return true; // Still moving (waiting)
+                    // If tile is occupied and NOT our destination, wait
+                    if (!isDestination)
+                    {
+                        // Wait this tick - don't move onto occupied tile
+                        return true; // Still moving (waiting)
+                    }
+
+                    // If it IS our destination but tile is occupied by 1+ people
+                    // Only move there if we absolutely must (no choice)
+                    // This allows stacking at destinations when building is full
+                    // but prevents unnecessary stacking during movement
                 }
             }
             
             // Move to target
+            var oldPosition = Position;
             Position = target;
+
+            // Update tile registrations immediately for collision avoidance
+            if (oldPosition.X != target.X || oldPosition.Y != target.Y)
+            {
+                var oldTile = grid.GetTile(oldPosition.X, oldPosition.Y);
+                var newTile = grid.GetTile(target.X, target.Y);
+
+                if (oldTile != null && oldTile.PeopleOnTile.Contains(this))
+                {
+                    oldTile.PeopleOnTile.Remove(this);
+                }
+
+                if (newTile != null && !newTile.PeopleOnTile.Contains(this))
+                {
+                    newTile.PeopleOnTile.Add(this);
+                }
+            }
+
             PathIndex++;
             
             if (PathIndex < CurrentPath.Count)
@@ -265,38 +302,88 @@ namespace VillageBuilder.Engine.Entities
         {
             if (!IsAlive) return;
 
-            // Increase hunger over time (slower when sleeping)
-            if (IsSleeping)
+            // Increase hunger over time (slower when sleeping, doesn't increase when eating)
+            if (CurrentTask == PersonTask.Eating)
+            {
+                // No hunger increase while eating
+            }
+            else if (IsSleeping)
             {
                 Hunger = Math.Min(100, Hunger + 1);
             }
             else
             {
-                Hunger = Math.Min(100, Hunger + 1);
+                Hunger = Math.Min(100, Hunger + 2); // Faster when awake/active
             }
-            
-            // Decrease energy when working
+
+            // Health effects from hunger
+            if (Hunger >= 80)
+            {
+                // Very hungry - lose health
+                Health = Math.Max(0, Health - 2);
+                if (!IsSick && Health < 70)
+                {
+                    IsSick = true;
+                    EventLog.Instance.AddMessage(
+                        $"{FirstName} {LastName} has fallen ill from hunger", 
+                        LogLevel.Warning);
+                }
+            }
+            else if (Hunger >= 60)
+            {
+                // Hungry - slow health loss
+                Health = Math.Max(0, Health - 1);
+            }
+            else if (Health < 100 && Hunger < 40)
+            {
+                // Recovering - gain health when well-fed
+                Health = Math.Min(100, Health + 1);
+                if (Health >= 70 && IsSick)
+                {
+                    IsSick = false;
+                    DaysSick = 0;
+                    EventLog.Instance.AddMessage(
+                        $"{FirstName} {LastName} has recovered from illness", 
+                        LogLevel.Info);
+                }
+            }
+
+            // Track days sick
+            if (IsSick)
+            {
+                DaysSick++;
+            }
+
+            // Decrease energy when working (more when sick or hungry)
             if (CurrentTask == PersonTask.WorkingAtBuilding || CurrentTask == PersonTask.Constructing)
             {
-                Energy = Math.Max(0, Energy - 1);
+                int energyLoss = 1;
+                if (IsSick) energyLoss += 1;
+                if (Hunger >= 60) energyLoss += 1;
+                Energy = Math.Max(0, Energy - energyLoss);
             }
-            
-            // Recover energy when resting or sleeping (faster when sleeping)
+
+            // Recover energy when resting or sleeping (slower when sick)
+            int energyGain = IsSick ? 1 : 2;
             if (CurrentTask == PersonTask.Resting || CurrentTask == PersonTask.Idle)
             {
-                Energy = Math.Min(100, Energy + 2);
+                Energy = Math.Min(100, Energy + energyGain);
             }
             else if (CurrentTask == PersonTask.Sleeping || IsSleeping)
             {
-                Energy = Math.Min(100, Energy + 3); // Sleep recovers energy faster
+                Energy = Math.Min(100, Energy + (energyGain + 1)); // Sleep recovers energy faster
             }
-            
-            // Death from starvation
-            if (Hunger >= 100)
+            else if (CurrentTask == PersonTask.Eating)
+            {
+                Energy = Math.Min(100, Energy + 5); // Eating gives a small energy boost
+            }
+
+            // Death from health reaching zero
+            if (Health <= 0)
             {
                 IsAlive = false;
                 EventLog.Instance.AddMessage(
-                    $"{FirstName} {LastName} has died from starvation", 
+                    $"{FirstName} {LastName} has died from starvation and illness", 
                     LogLevel.Error);
             }
         }
@@ -307,6 +394,34 @@ namespace VillageBuilder.Engine.Entities
         public void Eat(int amount)
         {
             Hunger = Math.Max(0, Hunger - amount);
+        }
+
+        /// <summary>
+        /// Check if person needs to eat (hungry enough to stop and eat)
+        /// </summary>
+        public bool NeedsToEat()
+        {
+            return IsAlive && Hunger >= 50 && CurrentTask != PersonTask.Eating && CurrentTask != PersonTask.Sleeping;
+        }
+
+        /// <summary>
+        /// Start eating (person will consume food from village storage)
+        /// </summary>
+        public void StartEating()
+        {
+            CurrentTask = PersonTask.Eating;
+        }
+
+        /// <summary>
+        /// Finish eating and return to previous activity
+        /// </summary>
+        public void FinishEating()
+        {
+            // Return to idle - they'll pick up their work again through daily routines
+            if (CurrentTask == PersonTask.Eating)
+            {
+                CurrentTask = PersonTask.Idle;
+            }
         }
 
         /// <summary>
@@ -353,16 +468,42 @@ namespace VillageBuilder.Engine.Entities
             return homeTiles.Any(t => t.X == Position.X && t.Y == Position.Y);
         }
 
-        /// <summary>
-        /// Check if person is at their assigned work building
-        /// </summary>
-        public bool IsAtWork()
-        {
-            if (AssignedBuilding == null)
-                return false;
+                /// <summary>
+                /// Check if person is at their assigned work building
+                /// </summary>
+                public bool IsAtWork()
+                {
+                    if (AssignedBuilding == null)
+                        return false;
 
-            var workTiles = AssignedBuilding.GetOccupiedTiles();
-            return workTiles.Any(t => t.X == Position.X && t.Y == Position.Y);
+                    var workTiles = AssignedBuilding.GetOccupiedTiles();
+                    return workTiles.Any(t => t.X == Position.X && t.Y == Position.Y);
+                }
+
+                /// <summary>
+                /// Check if person is at a construction site (near or at the building)
+                /// </summary>
+                public bool IsAtConstructionSite(Building building)
+                {
+                    if (building == null)
+                        return false;
+
+                    // Check if person is on any of the building's tiles or adjacent to them
+                    var buildingTiles = building.GetOccupiedTiles();
+
+                    // Check if on building tile
+                    if (buildingTiles.Any(t => t.X == Position.X && t.Y == Position.Y))
+                        return true;
+
+                    // Check if adjacent to building (within 1 tile)
+                    foreach (var tile in buildingTiles)
+                    {
+                        int distance = Math.Abs(tile.X - Position.X) + Math.Abs(tile.Y - Position.Y);
+                        if (distance <= 1)
+                            return true;
+                    }
+
+                    return false;
+                }
+            }
         }
-    }
-}

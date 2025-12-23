@@ -158,11 +158,14 @@ namespace VillageBuilder.Game.Graphics.UI
                 ("L", "Build Lumberyard", new Color(255, 180, 100, 255)),
                 ("M", "Build Mine", new Color(255, 180, 100, 255)),
                 ("K", "Build Workshop", new Color(255, 180, 100, 255)),
+                ("E", "Build Well", new Color(255, 180, 100, 255)),
                 ("T", "Build Town Hall", new Color(255, 180, 100, 255)),
                 ("", "", Color.White), // Spacer
                 ("R", "Rotate Building", new Color(150, 200, 255, 255)),
                 ("TAB", "Toggle Road Snap", new Color(150, 200, 255, 255)),
                 ("ESC", "Cancel Placement", new Color(255, 150, 150, 255)),
+                ("", "", Color.White), // Spacer
+                ("V", "Toggle Heat Map", new Color(100, 200, 255, 255)),
                 ("", "", Color.White), // Spacer
                 ("Q", "Quit Game", new Color(255, 100, 100, 255))
             };
@@ -411,10 +414,78 @@ namespace VillageBuilder.Game.Graphics.UI
             y += LineHeight;
             GraphicsConfig.DrawConsoleText($"│ Type: {building.Type}", _sidebarX + Padding, y, SmallFontSize, textColor);
             y += LineHeight;
-            GraphicsConfig.DrawConsoleText($"│ Status: {(building.IsConstructed ? "Operational" : "Under Construction")}", 
-                _sidebarX + Padding, y, SmallFontSize, textColor);
-            y += LineHeight;
-            
+
+            // Construction status
+            if (!building.IsConstructed)
+            {
+                var stage = building.GetConstructionStage();
+                var progressPercent = building.GetConstructionProgressPercent();
+                var stageColor = new Color(255, 200, 100, 255);
+
+                GraphicsConfig.DrawConsoleText($"│ Status: Under Construction", _sidebarX + Padding, y, SmallFontSize, new Color(255, 150, 50, 255));
+                y += LineHeight;
+
+                GraphicsConfig.DrawConsoleText($"│ Stage: {stage}", _sidebarX + Padding, y, SmallFontSize, stageColor);
+                y += LineHeight;
+
+                // Progress bar
+                GraphicsConfig.DrawConsoleText($"│ Progress: {progressPercent}%", _sidebarX + Padding, y, SmallFontSize, textColor);
+                y += LineHeight;
+
+                // Draw visual progress bar
+                int barWidth = 150;
+                int barHeight = 12;
+                int barX = _sidebarX + Padding + 15;
+                int barY = y;
+
+                // Background
+                Raylib.DrawRectangle(barX, barY, barWidth, barHeight, new Color(50, 50, 50, 255));
+
+                // Fill
+                int fillWidth = (int)(barWidth * (progressPercent / 100f));
+                Color fillColor = progressPercent switch
+                {
+                    < 25 => new Color(139, 90, 43, 255),
+                    < 50 => new Color(160, 120, 80, 255),
+                    < 75 => new Color(180, 140, 100, 255),
+                    _ => new Color(100, 255, 100, 255)
+                };
+                Raylib.DrawRectangle(barX, barY, fillWidth, barHeight, fillColor);
+
+                // Border
+                Raylib.DrawRectangleLines(barX, barY, barWidth, barHeight, new Color(150, 150, 150, 255));
+
+                y += barHeight + 5;
+
+                // Construction workers
+                GraphicsConfig.DrawConsoleText($"│ Builders: {building.ConstructionWorkers.Count}", _sidebarX + Padding, y, SmallFontSize, new Color(150, 255, 150, 255));
+                y += LineHeight;
+
+                if (building.ConstructionWorkers.Count > 0)
+                {
+                    var workersByFamily = building.ConstructionWorkers.GroupBy(w => w.Family).Where(g => g.Key != null);
+                    foreach (var familyGroup in workersByFamily)
+                    {
+                        var family = familyGroup.Key!;
+                        GraphicsConfig.DrawConsoleText($"│   • {family.FamilyName} ({familyGroup.Count()})", 
+                            _sidebarX + Padding + 10, y, SmallFontSize - 2, textColor);
+                        y += LineHeight;
+                    }
+                }
+                else
+                {
+                    GraphicsConfig.DrawConsoleText($"│   (No builders assigned)", 
+                        _sidebarX + Padding + 10, y, SmallFontSize - 2, new Color(255, 150, 50, 255));
+                    y += LineHeight;
+                }
+            }
+            else
+            {
+                GraphicsConfig.DrawConsoleText($"│ Status: Operational", 
+                    _sidebarX + Padding, y, SmallFontSize, new Color(100, 255, 100, 255));
+                y += LineHeight;
+            }
+
             y += 5;
             
             // Show workers or residents depending on building type
@@ -576,11 +647,23 @@ namespace VillageBuilder.Game.Graphics.UI
                     }
                     else if (!isHouse && !isAssignedHere && availableCount > 0)
                     {
-                        // Assign family to work at building - immediate execution
-                        Console.WriteLine($"[JOB] Assigning {family.FamilyName} family to work at {building.Type}");
-                        var command = new VillageBuilder.Engine.Commands.PersonCommands.AssignFamilyJobCommand(
-                            0, engine.CurrentTick, family.Id, building.Id);
-                        engine.SubmitCommand(command);
+                        // Check if building is under construction
+                        if (!building.IsConstructed)
+                        {
+                            // Assign family to construction work
+                            Console.WriteLine($"[CONSTRUCTION] Assigning {family.FamilyName} family to build {building.Type}");
+                            var command = new VillageBuilder.Engine.Commands.BuildingCommands.AssignConstructionWorkersCommand(
+                                0, engine.CurrentTick, family.Id, building.Id);
+                            engine.SubmitCommand(command);
+                        }
+                        else
+                        {
+                            // Assign family to work at building - immediate execution
+                            Console.WriteLine($"[JOB] Assigning {family.FamilyName} family to work at {building.Type}");
+                            var command = new VillageBuilder.Engine.Commands.PersonCommands.AssignFamilyJobCommand(
+                                0, engine.CurrentTick, family.Id, building.Id);
+                            engine.SubmitCommand(command);
+                        }
                     }
                 }
 

@@ -5,8 +5,8 @@ using VillageBuilder.Game.Core.Services;
 
 var config = new GameConfiguration
 {
-    MapWidth = 100,
-    MapHeight = 100,
+    MapWidth = 256,
+    MapHeight = 256,
     TickRate = 60,
     MaxPlayers = 4,
     Seed = 42

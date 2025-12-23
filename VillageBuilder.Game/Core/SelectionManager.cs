@@ -32,11 +32,14 @@ namespace VillageBuilder.Game.Core
         public void SelectPeopleAtTile(List<Person> peopleAtTile, int initialIndex = 0)
         {
             if (peopleAtTile == null || peopleAtTile.Count == 0) return;
-            
+
+            // Create a defensive copy to prevent external modifications
+            var peopleCopy = new List<Person>(peopleAtTile);
+
             CurrentSelectionType = SelectionType.Person;
-            PeopleAtSelectedTile = peopleAtTile;
-            SelectedPersonIndex = Math.Clamp(initialIndex, 0, peopleAtTile.Count - 1);
-            SelectedPerson = peopleAtTile[SelectedPersonIndex];
+            PeopleAtSelectedTile = peopleCopy;
+            SelectedPersonIndex = Math.Clamp(initialIndex, 0, peopleCopy.Count - 1);
+            SelectedPerson = peopleCopy[SelectedPersonIndex];
             SelectedBuilding = null;
         }
         
