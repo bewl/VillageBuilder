@@ -9,6 +9,7 @@ using VillageBuilder.Engine.Entities.Wildlife;
 using VillageBuilder.Engine.World;
 using VillageBuilder.Engine.Buildings;
 using System.Numerics;
+using VillageBuilder.Game.Graphics.Rendering;  // Phase 3: CompositeMapRenderer
 
 namespace VillageBuilder.Game.Graphics.UI
 {
@@ -16,6 +17,9 @@ namespace VillageBuilder.Game.Graphics.UI
     {
         // Font size now dynamic from GraphicsConfig
         private static int FontSize => GraphicsConfig.SmallConsoleFontSize;
+
+        // Phase 3: Composite renderer orchestrates all specialized renderers
+        private readonly CompositeMapRenderer _compositeRenderer = new();
 
         public void Render(GameEngine engine, Camera2D camera, VillageBuilder.Game.Core.Selection.SelectionCoordinator? selectionManager = null)
         {
@@ -31,78 +35,14 @@ namespace VillageBuilder.Game.Graphics.UI
             float worldRight = camera.Target.X + (screenWidth / 2f) / camera.Zoom;
             float worldBottom = camera.Target.Y + (screenHeight / 2f) / camera.Zoom;
             
-            int minX = Math.Max(0, (int)(worldLeft / tileSize) - 1);
-            int maxX = Math.Min(grid.Width, (int)(worldRight / tileSize) + 2);
-            int minY = Math.Max(0, (int)(worldTop / tileSize) - 1);
-            int maxY = Math.Min(grid.Height, (int)(worldBottom / tileSize) + 2);
+                int minX = Math.Max(0, (int)(worldLeft / tileSize) - 1);
+                int maxX = Math.Min(grid.Width, (int)(worldRight / tileSize) + 2);
+                int minY = Math.Max(0, (int)(worldTop / tileSize) - 1);
+                int maxY = Math.Min(grid.Height, (int)(worldBottom / tileSize) + 2);
 
-            // Track which buildings we've already drawn
-            var drawnBuildings = new HashSet<Building>();
-            
-            // Calculate darkness factor for day/night visual effect
-            float darknessFactor = engine.Time.GetDarknessFactor();
-
-            // Render only visible tiles (culling for performance)
-            for (int x = minX; x < maxX; x++)
-            {
-                for (int y = minY; y < maxY; y++)
-                {
-                    var tile = grid.GetTile(x, y);
-                    if (tile == null) continue;
-
-                    var pos = new Vector2(x * tileSize, y * tileSize);
-
-                    // If this tile has a building, only draw it once when we first encounter it
-                    if (tile.Building != null)
-                    {
-                        if (!drawnBuildings.Contains(tile.Building))
-                        {
-                            DrawDetailedBuilding(tile.Building, tileSize, engine.Time);
-                            drawnBuildings.Add(tile.Building);
-                        }
-                        // Skip drawing anything else for building tiles - the building handles it
-                        continue;
-                    }
-
-                        // Draw tile background (only for non-building tiles)
-                        var bgColor = GetTileBackgroundColor(tile);
-
-                        // Apply darkness overlay for night
-                        if (darknessFactor > 0)
-                        {
-                            bgColor = DarkenColor(bgColor, darknessFactor);
-                        }
-
-                                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, tileSize, tileSize, bgColor);
-
-                                    // Draw base tile glyph (SKIP in sprite mode to reduce visual clutter)
-                                    if (!GraphicsConfig.UseSpriteMode)
-                                    {
-                                        DrawTileGlyph(tile, pos, tileSize, darknessFactor);
-                                    }
-
-                                    // Draw terrain decorations on top
-                                    DrawTerrainDecorations(tile, pos, tileSize, darknessFactor, engine.Time);
-                                }
-                        }
-            
-            // Render people on top of everything
-            RenderPeople(engine, tileSize, minX, maxX, minY, maxY, selectionManager);
-
-            // Render wildlife
-            RenderWildlife(engine, tileSize, minX, maxX, minY, maxY, selectionManager);
-
-                // Render selection indicators for buildings
-                if (selectionManager?.SelectedBuilding != null)
-                {
-                    DrawBuildingSelection(selectionManager.SelectedBuilding, tileSize);
-                }
-
-                // Render selection indicator for tiles
-                if (selectionManager?.SelectedTile != null)
-                {
-                    DrawTileSelection(selectionManager.SelectedTile, tileSize);
-                }
+                // Phase 3: Use CompositeMapRenderer to orchestrate all specialized renderers
+                // This replaces ~500 lines of inline rendering code with clean, modular architecture
+                _compositeRenderer.RenderMap(engine, camera, selectionManager, tileSize, minX, maxX, minY, maxY);
             }
 
         private void DrawDetailedBuilding(Building building, int tileSize, GameTime time)
