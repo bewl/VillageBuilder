@@ -11,8 +11,9 @@ namespace VillageBuilder.Game.Graphics.UI
     public class StatusBarRenderer
     {
         private const int Padding = 8;
-        private const int FontSize = GraphicsConfig.ConsoleFontSize; // Use config values
-        private const int SmallFontSize = GraphicsConfig.SmallConsoleFontSize; // Use config values
+        // Font sizes are now dynamic properties, not constants
+        private static int FontSize => GraphicsConfig.ConsoleFontSize;
+        private static int SmallFontSize => GraphicsConfig.SmallConsoleFontSize;
 
         public void Render(GameEngine engine, float timeScale, bool isPaused, HeatMapRenderer? heatMapRenderer = null)
         {

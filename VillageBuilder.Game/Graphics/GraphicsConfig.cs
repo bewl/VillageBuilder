@@ -20,16 +20,52 @@ namespace VillageBuilder.Game.Graphics
         public const int ConsoleCols = 120;
         public const int ConsoleRows = 67;
 
-        // UI Layout
-        public const int StatusBarHeight = 60; // Increased for 20px font with proper spacing
+        // UI Layout - NOW DYNAMIC based on screen resolution
+        // Status bar scales more conservatively (2.5x instead of 3x font height)
+        public static int StatusBarHeight => (int)(ConsoleFontSize * 2.5f);
         public const int MapViewportWidth = 84; // 70% of console
         public const int SidebarWidth = 36; // 30% of console
 
-        // Font settings
+        // Font settings - NOW DYNAMIC based on screen resolution
         public static Font ConsoleFont { get; private set; }
-        public const int ConsoleFontSize = 20;
-        public const int SmallConsoleFontSize = 18;
+        public static Font EmojiFont { get; private set; }  // NEW: Separate font for emojis
+
+        // Sprite settings - Modern emoji rendering via textures
+        public static bool UseSpriteMode { get; private set; } = true;  // Default: prefer sprites over ASCII
+
+        // Dynamic font sizing based on screen height
+        // Base: 24px at 1080p (increased from 20px for better glyph accommodation)
+        // Uses sublinear scaling to prevent oversized fonts at high resolutions
+        private const int BaseFontSize = 24;
+        private const int BaseScreenHeight = 1080;
+
+        public static int ConsoleFontSize => CalculateFontSize(BaseFontSize);
+        public static int SmallConsoleFontSize => CalculateFontSize(18);
+
         private static bool _fontLoaded = false;
+
+        /// <summary>
+        /// Calculates font size scaled to current screen resolution using sublinear scaling.
+        /// This prevents fonts from becoming too large at high resolutions while still
+        /// improving readability compared to fixed 20px.
+        /// </summary>
+        private static int CalculateFontSize(int baseSize)
+        {
+            int currentHeight = ScreenHeight;
+            if (currentHeight == 0) currentHeight = BaseScreenHeight; // Fallback
+
+            // Use square root scaling for more conservative growth
+            // This gives better results at high resolutions where linear scaling overshoots
+            float heightRatio = (float)currentHeight / BaseScreenHeight;
+            float scale = (float)Math.Sqrt(heightRatio);
+
+            // Apply scaling
+            int scaledSize = (int)(baseSize * scale);
+
+            // Clamp to reasonable bounds (12px min, 30px max)
+            // Reduced max from 40 to 30 to prevent oversized text
+            return Math.Clamp(scaledSize, 12, 30);
+        }
 
         /// <summary>
         /// Initializes the Raylib window in borderless fullscreen windowed mode.
@@ -66,24 +102,27 @@ namespace VillageBuilder.Game.Graphics
             Raylib.SetWindowPosition(0, 0);
 
             // Disable ESC key as exit key (we handle ESC ourselves for UI navigation)
-            Raylib.SetExitKey(0);
+                Raylib.SetExitKey(0);
 
-            Raylib.SetTargetFPS(TargetFPS);
+                Raylib.SetTargetFPS(TargetFPS);
 
-            Console.WriteLine($"GraphicsConfig: Initialized borderless fullscreen at ({monitorWidth}x{monitorHeight}) position (0, 0)");
-        }
+                // Log font size calculation for debugging
+                int fontSize = ConsoleFontSize;
+                Console.WriteLine($"GraphicsConfig: Initialized borderless fullscreen at ({monitorWidth}x{monitorHeight}) position (0, 0)");
+                Console.WriteLine($"GraphicsConfig: Calculated font size: {fontSize}px (base: {BaseFontSize}px at {BaseScreenHeight}p)");
+            }
 
         public static void LoadFont()
         {
             if (_fontLoaded) return;
 
-            // Load font with extended character support
-            int[] codepoints = new int[512];
-            
+            // Load font with extended character support for terrain decorations
+            int[] codepoints = new int[768]; // Increased from 512 to accommodate terrain decorations
+
             // Basic ASCII (0-127)
             for (int i = 0; i < 128; i++)
                 codepoints[i] = i;
-            
+
             // Extended ASCII / Code Page 437 (128-255)
             for (int i = 128; i < 256; i++)
                 codepoints[i] = i;
@@ -167,39 +206,82 @@ namespace VillageBuilder.Game.Graphics
             codepoints[idx++] = 0x2692; // ⚒ (hammer and pick)
             codepoints[idx++] = 0x1F4A4; // 💤 (zzz)
 
+            // NEW: Terrain decoration emojis
+            codepoints[idx++] = 0x1F333; // 🌳 (deciduous tree)
+            codepoints[idx++] = 0x1F332; // 🌲 (evergreen tree)
+            codepoints[idx++] = 0x1F384; // 🎄 (Christmas tree)
+            codepoints[idx++] = 0x1FAB5; // 🪵 (wood/log)
+            codepoints[idx++] = 0x1F33A; // 🌺 (hibiscus)
+            codepoints[idx++] = 0x1FAD0; // 🫐 (blueberries)
+            codepoints[idx++] = 0x1F338; // 🌸 (cherry blossom)
+            codepoints[idx++] = 0x1F33C; // 🌼 (blossom)
+            codepoints[idx++] = 0x1F33E; // 🌾 (rice/grain)
+            codepoints[idx++] = 0x1F33F; // 🌿 (herb)
+            codepoints[idx++] = 0x1F344; // 🍄 (mushroom)
+            codepoints[idx++] = 0x1F985; // 🦅 (eagle)
+            codepoints[idx++] = 0x1F426; // 🐦 (bird)
+            codepoints[idx++] = 0x1F99C; // 🦜 (parrot)
+            codepoints[idx++] = 0x1F98B; // 🦋 (butterfly)
+            codepoints[idx++] = 0x1F430; // 🐰 (rabbit face)
+            codepoints[idx++] = 0x1F98C; // 🦌 (deer)
+            codepoints[idx++] = 0x1F41F; // 🐟 (fish)
+
+            // Additional symbols for terrain
+            codepoints[idx++] = 0x2318; // ⌘ (place of interest)
+            codepoints[idx++] = 0x25C9; // ◉ (fisheye)
+            codepoints[idx++] = 0x25CE; // ◎ (bullseye)
+            codepoints[idx++] = 0x25C8; // ◈ (white diamond with black centre)
+            codepoints[idx++] = 0x25CA; // ◊ (lozenge)
+            codepoints[idx++] = 0x2726; // ✦ (black four-pointed star)
+            codepoints[idx++] = 0x273F; // ✿ (black florette)
+            codepoints[idx++] = 0x273E; // ✾ (six petals surrounded)
+            codepoints[idx++] = 0x2740; // ❀ (white florette)
+            codepoints[idx++] = 0x2741; // ❁ (eight petals)
+            codepoints[idx++] = 0x274B; // ❋ (heavy eight teardrop-spoked asterisk)
+            codepoints[idx++] = 0x2756; // ❖ (black diamond minus white X)
+            codepoints[idx++] = 0x273A; // ✺ (sixteen pointed asterisk)
+            codepoints[idx++] = 0x2605; // ★ (black star)
+            codepoints[idx++] = 0x2606; // ☆ (white star)
+            codepoints[idx++] = 0x25B4; // ▴ (black up-pointing small triangle)
+            codepoints[idx++] = 0x25B3; // △ (white up-pointing triangle)
+            codepoints[idx++] = 0x219F; // ↟ (upwards two-headed arrow)
+            codepoints[idx++] = 0x2303; // ⌃ (up arrowhead)
+            codepoints[idx++] = 0x223C; // ∼ (tilde operator)
+            codepoints[idx++] = 0x224B; // ≋ (triple tilde)
+            codepoints[idx++] = 0x2038; // ‸ (caret)
+            codepoints[idx++] = 0x2219; // ∙ (bullet operator - for smoke)
+            codepoints[idx++] = 0x02D9; // ˙ (dot above)
+            codepoints[idx++] = 0x2218; // ∘ (ring operator)
+            codepoints[idx++] = 0x25E6; // ◦ (white bullet)
+            codepoints[idx++] = 0x2698; // ⚘ (flower)
+            codepoints[idx++] = 0x2299; // ⊙ (circled dot)
+
             Array.Resize(ref codepoints, idx);
 
             // Font priority order - UPDATED for full ASCII/Unicode support
             // Priority: Fonts that exist on user's system > Unicode coverage > Readability
             string[] fontPaths = new[]
             {
-                // BEST: Cascadia fonts (check both Mono and Code variants)
+                // PRIORITY 1: Bundled fonts (shipped with game) - JetBrains Mono is best!
+                "assets/fonts/JetBrainsMono-Regular.ttf",     // NEW: Best clarity + Unicode
+                "assets/fonts/CascadiaCode.ttf",
+                "assets/fonts/CascadiaMono.ttf",
+                "assets/fonts/DejaVuSansMono.ttf",
+
+                // PRIORITY 2: System-installed modern fonts
+                "C:\\Windows\\Fonts\\JetBrainsMono-Regular.ttf", // JetBrains Mono (if installed)
                 "C:\\Windows\\Fonts\\CascadiaCode.ttf",        // Cascadia Code - excellent Unicode
                 "C:\\Windows\\Fonts\\CascadiaMono.ttf",        // Cascadia Mono - BEST for Unicode + readability
                 "C:\\Windows\\Fonts\\Cascadia.ttf",            // Generic Cascadia
 
-                // EXCELLENT: Open-source with full Unicode coverage
+                // GOOD: Alternative modern fonts
                 "C:\\Windows\\Fonts\\DejaVuSansMono.ttf",      // DejaVu Sans Mono - excellent Unicode
                 "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",  // Linux
-
-                // GOOD: Alternative modern fonts
-                "C:\\Windows\\Fonts\\JetBrainsMono-Regular.ttf", // JetBrains Mono
                 "C:\\Windows\\Fonts\\IBMPlexMono-Regular.ttf", // IBM Plex Mono
 
-                // Bundled fonts (if provided with game)
-                "assets/fonts/CascadiaCode.ttf",
-                "assets/fonts/CascadiaMono.ttf",
-                "assets/fonts/DejaVuSansMono.ttf",
-                "assets/fonts/JetBrainsMono.ttf",
-                "assets/fonts/IBMPlexMono.ttf",
-
                 // FALLBACK: Standard Windows fonts (limited Unicode)
-                "C:\\Windows\\Fonts\\consola.ttf",             // Consolas - limited Unicode (was loading before!)
+                "C:\\Windows\\Fonts\\consola.ttf",             // Consolas - limited Unicode
                 "C:\\Windows\\Fonts\\lucon.ttf",               // Lucida Console
-
-                // RETRO: Authentic DOS fonts (good for aesthetic, limited support)
-                "assets/fonts/Px437_IBM_VGA_8x16.ttf",         // Authentic DOS VGA font
-                "assets/fonts/PerfectDOSVGA437.ttf",           // Another DOS font option
 
                 // SYSTEM: macOS fallbacks
                 "/System/Library/Fonts/Monaco.ttf",            // macOS
@@ -233,6 +315,13 @@ namespace VillageBuilder.Game.Graphics
                         System.Console.WriteLine("==========================");
 
                         _fontLoaded = true;
+
+                        // NEW: Load emoji font for terrain decorations
+                        LoadEmojiFont();
+
+                        // NEW: Load emoji sprites for modern rendering
+                        LoadEmojiSprites();
+
                         return;
                     }
                     catch (Exception ex)
@@ -246,23 +335,183 @@ namespace VillageBuilder.Game.Graphics
                 }
             }
 
-            // Final fallback
-            System.Console.WriteLine("⚠ Warning: No font with Unicode support found. Using default font.");
-            ConsoleFont = Raylib.GetFontDefault();
-            Raylib.SetTextureFilter(ConsoleFont.Texture, TextureFilter.Point);
-            System.Console.WriteLine($"  Default font texture filter: Point (nearest neighbor)");
-            _fontLoaded = true;
-        }
+                // Final fallback
+                System.Console.WriteLine("⚠ Warning: No font with Unicode support found. Using default font.");
+                ConsoleFont = Raylib.GetFontDefault();
+                Raylib.SetTextureFilter(ConsoleFont.Texture, TextureFilter.Point);
+                System.Console.WriteLine($"  Default font texture filter: Point (nearest neighbor)");
+                System.Console.WriteLine($"  ⚠ Default font lacks emoji support - enabling ASCII-only mode for terrain");
+                        VillageBuilder.Engine.World.TerrainDecoration.UseAsciiOnly = true;
+                        _fontLoaded = true;
+                    }
 
-        public static void UnloadFont()
-        {
-            // Fix: Font does not have a 'texture' property, so compare using BaseSize as a proxy for default font
-            // Only unload if font is loaded and is not the default font
-            if (_fontLoaded && ConsoleFont.BaseSize != Raylib.GetFontDefault().BaseSize)
-            {
-                Raylib.UnloadFont(ConsoleFont);
-            }
-        }
+                /// <summary>
+                /// Load emoji font for terrain decorations and UI icons
+                /// </summary>
+                private static void LoadEmojiFont()
+                {
+                    System.Console.WriteLine("");
+                    System.Console.WriteLine("=== Emoji Font Loading ===");
+
+                    // Define emoji font paths in priority order
+                    string[] emojiFontPaths = new[]
+                    {
+                        // PRIORITY 1: System fonts (monochrome vector - Raylib compatible)
+                        "assets/fonts/NotoColorEmoji-Regular.ttf",
+                        "C:\\Windows\\Fonts\\seguiemj.ttf",  // Segoe UI Emoji (Windows) - BEST for Raylib
+                        "/System/Library/Fonts/Apple Color Emoji.ttc",  // Apple Color Emoji (macOS)
+
+                        // PRIORITY 2: Bundled fonts (may not work - color emoji format)
+                        // NOTE: Noto Color Emoji uses PNG/bitmap format that Raylib cannot load
+                        // Keeping for future compatibility if Raylib adds color emoji support
+                        "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"  // Noto (Linux)
+                    };
+
+                    // Emoji codepoints (terrain decorations + UI icons)
+                    int[] emojiCodepoints = new int[]
+                    {
+                        // Terrain decorations
+                        0x1F333, // 🌳 (deciduous tree)
+                        0x1F332, // 🌲 (evergreen tree)
+                        0x1F384, // 🎄 (Christmas tree)
+                        0x1FAB5, // 🪵 (wood/log)
+                        0x1F33A, // 🌺 (hibiscus)
+                        0x1FAD0, // 🫐 (blueberries)
+                        0x1F338, // 🌸 (cherry blossom)
+                        0x1F33C, // 🌼 (blossom)
+                        0x1F33E, // 🌾 (rice/grain)
+                        0x1F33F, // 🌿 (herb)
+                        0x1F344, // 🍄 (mushroom)
+                        0x1F985, // 🦅 (eagle)
+                        0x1F426, // 🐦 (bird)
+                        0x1F99C, // 🦜 (parrot)
+                        0x1F98B, // 🦋 (butterfly)
+                        0x1F430, // 🐰 (rabbit face)
+                        0x1F98C, // 🦌 (deer)
+                        0x1F41F, // 🐟 (fish)
+
+                        // UI icons
+                        0x1F3E0, // 🏠 (house)
+                        0x1F528, // 🔨 (hammer)
+                        0x1F4A4, // 💤 (zzz - sleeping)
+                    };
+
+                    foreach (var emojiPath in emojiFontPaths)
+                    {
+                        System.Console.WriteLine($"  Checking: {emojiPath}");
+
+                        if (System.IO.File.Exists(emojiPath))
+                        {
+                            System.Console.WriteLine($"    → File exists! Attempting to load...");
+                            try
+                            {
+                                EmojiFont = Raylib.LoadFontEx(emojiPath, ConsoleFontSize, emojiCodepoints, emojiCodepoints.Length);
+
+                                // Set texture filter for crisp rendering
+                                Raylib.SetTextureFilter(EmojiFont.Texture, TextureFilter.Point);
+
+                                // Verify the font actually loaded (check if it has valid glyphs)
+                                // Also check if it has the specific emojis we need (not just any glyphs)
+                                if (EmojiFont.GlyphCount > 0 && EmojiFont.Texture.Id > 2)
+                                {
+                                    System.Console.WriteLine($"✓ Emoji font loaded successfully: {System.IO.Path.GetFileName(emojiPath)}");
+                                    System.Console.WriteLine($"  Texture ID: {EmojiFont.Texture.Id}");
+                                    System.Console.WriteLine($"  Glyph count: {EmojiFont.GlyphCount}");
+
+                                    // IMPORTANT: Segoe UI Emoji has limited glyph coverage
+                                    // It only has basic emojis, not newer ones like 🌳🌲🌸🦋🐰
+                                    // These newer emojis will render as ? even though the font loaded
+                                    System.Console.WriteLine($"  ⚠ Note: Segoe UI Emoji has limited coverage - using ASCII mode");
+                                    System.Console.WriteLine($"  ⚠ Newer emojis (🌳🌸🦋) not supported - they will show as ASCII symbols");
+                                    System.Console.WriteLine("==========================");
+
+                                    // Use ASCII-only mode because Segoe UI Emoji doesn't have terrain emojis
+                                    VillageBuilder.Engine.World.TerrainDecoration.UseAsciiOnly = true;
+
+                                    return;
+                                }
+                                else
+                                {
+                                    System.Console.WriteLine($"    ✗ Font loaded but has no valid glyphs (color emoji format not supported)");
+                                    System.Console.WriteLine($"    Texture ID: {EmojiFont.Texture.Id}, Glyphs: {EmojiFont.GlyphCount}");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Console.WriteLine($"    ✗ Failed to load: {ex.Message}");
+                            }
+                        }
+                        else
+                        {
+                            System.Console.WriteLine($"    ✗ File not found");
+                        }
+                    }
+
+                    // Fallback: No emoji font found, use ASCII mode
+                    System.Console.WriteLine("⚠ No emoji font found - falling back to ASCII-only mode");
+                    System.Console.WriteLine("  Terrain decorations will use ASCII symbols instead");
+                    System.Console.WriteLine("==========================");
+
+                    VillageBuilder.Engine.World.TerrainDecoration.UseAsciiOnly = true;
+
+                        // Use primary font as fallback
+                        EmojiFont = ConsoleFont;
+                    }
+
+                    /// <summary>
+                    /// Load emoji sprites for modern terrain decoration rendering
+                    /// </summary>
+                    private static void LoadEmojiSprites()
+                    {
+                        try
+                        {
+                            SpriteAtlasManager.Instance.LoadSprites();
+
+                            if (SpriteAtlasManager.Instance.SpriteModeEnabled)
+                            {
+                                // Sprites loaded successfully - enable sprite mode
+                                UseSpriteMode = true;
+
+                                // Disable ASCII-only mode since we have beautiful sprites!
+                                VillageBuilder.Engine.World.TerrainDecoration.UseAsciiOnly = false;
+
+                                System.Console.WriteLine("✓ Sprite mode enabled - terrain will use colorful emoji sprites!");
+                            }
+                            else
+                            {
+                                // No sprites available - stick with ASCII mode
+                                UseSpriteMode = false;
+                                VillageBuilder.Engine.World.TerrainDecoration.UseAsciiOnly = true;
+
+                                System.Console.WriteLine("⚠ Sprite mode disabled - using ASCII fallback");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Console.WriteLine($"✗ Failed to load emoji sprites: {ex.Message}");
+                            UseSpriteMode = false;
+                            VillageBuilder.Engine.World.TerrainDecoration.UseAsciiOnly = true;
+                        }
+                    }
+
+                    public static void UnloadFont()
+                    {
+                        // Only unload if font is loaded and is not the default font
+                        if (_fontLoaded && ConsoleFont.BaseSize != Raylib.GetFontDefault().BaseSize)
+                        {
+                            Raylib.UnloadFont(ConsoleFont);
+                        }
+
+                        // Unload emoji font if it's different from the primary font
+                        if (EmojiFont.BaseSize != ConsoleFont.BaseSize && 
+                            EmojiFont.BaseSize != Raylib.GetFontDefault().BaseSize)
+                        {
+                            Raylib.UnloadFont(EmojiFont);
+                        }
+
+                        // Unload emoji sprites
+                        SpriteAtlasManager.Instance.UnloadSprites();
+                    }
 
         // Colors (with alpha for effects)
         public static class Colors
@@ -298,7 +547,7 @@ namespace VillageBuilder.Game.Graphics
             // Round coordinates to whole pixels for crisp rendering
             var pixelX = (float)Math.Round((double)x);
             var pixelY = (float)Math.Round((double)y);
-            
+
             Raylib.DrawTextEx(
                 ConsoleFont,
                 text,
@@ -307,6 +556,129 @@ namespace VillageBuilder.Game.Graphics
                 1.0f, // Minimal spacing to prevent overlap while maintaining sharpness
                 color
             );
+        }
+
+        /// <summary>
+        /// Draw text with automatic font selection (emoji font for emojis, console font for everything else)
+        /// </summary>
+        public static void DrawConsoleTextAuto(string text, int x, int y, int fontSize, Color color)
+        {
+            // Try sprite rendering first for single emoji characters
+            if (text.Length <= 2 && IsEmoji(text))
+            {
+                // Attempt to draw as sprite
+                if (DrawEmojiSprite(text, x, y, fontSize, color))
+                {
+                    return; // Success - sprite rendered
+                }
+                // Fall through to font rendering if sprite failed
+            }
+
+            // Detect if text contains emoji codepoints
+            Font fontToUse = IsEmoji(text) ? EmojiFont : ConsoleFont;
+
+            // Round coordinates to whole pixels for crisp rendering
+            var pixelX = (float)Math.Round((double)x);
+            var pixelY = (float)Math.Round((double)y);
+
+            Raylib.DrawTextEx(
+                fontToUse,
+                text,
+                new System.Numerics.Vector2(pixelX, pixelY),
+                fontSize,
+                1.0f,
+                        color
+                    );
+                }
+
+                /// <summary>
+                /// Draw an emoji as a sprite texture (for UI icons)
+                /// This provides better emoji rendering than font-based text
+                /// </summary>
+                /// <param name="emoji">The emoji string (e.g., "🏠", "🌾")</param>
+                /// <param name="x">X position</param>
+                /// <param name="y">Y position</param>
+                /// <param name="size">Size in pixels</param>
+                /// <param name="tint">Color tint (use White for no tint)</param>
+                /// <returns>True if sprite was drawn, false if fallback to text needed</returns>
+                public static bool DrawEmojiSprite(string emoji, int x, int y, int size, Color tint)
+                {
+                    // Only works in sprite mode
+                    if (!UseSpriteMode)
+                        return false;
+
+                    // Map emoji to decoration type
+                    var decorType = GetDecorationTypeForEmoji(emoji);
+                    if (!decorType.HasValue)
+                        return false;
+
+                    // Get sprite texture
+                    var sprite = SpriteAtlasManager.Instance.GetSprite(decorType.Value);
+                    if (!sprite.HasValue)
+                        return false;
+
+                    // Render sprite centered in the given size
+                    var sourceRect = new Rectangle(0, 0, sprite.Value.Width, sprite.Value.Height);
+                    var destRect = new Rectangle(x, y, size, size);
+                    var origin = new System.Numerics.Vector2(0, 0);
+
+                    Raylib.DrawTexturePro(sprite.Value, sourceRect, destRect, origin, 0f, tint);
+                    return true;
+                }
+
+                /// <summary>
+                /// Map emoji characters to DecorationType for sprite rendering
+                /// </summary>
+                private static VillageBuilder.Engine.World.DecorationType? GetDecorationTypeForEmoji(string emoji)
+                {
+                    return emoji switch
+                    {
+                        // Buildings
+                        "🏠" => VillageBuilder.Engine.World.DecorationType.TreeOak, // House (use oak as placeholder)
+                        "🌾" => VillageBuilder.Engine.World.DecorationType.GrassTuft, // Farm
+                        "📦" => VillageBuilder.Engine.World.DecorationType.RockBoulder, // Warehouse
+                        "⛏️" => VillageBuilder.Engine.World.DecorationType.RockPebble, // Mine
+                        "🪓" => VillageBuilder.Engine.World.DecorationType.StumpOld, // Lumberyard  
+                        "🔨" => VillageBuilder.Engine.World.DecorationType.LogFallen, // Workshop
+                        "🏪" => VillageBuilder.Engine.World.DecorationType.BushFlowering, // Market
+                        "💧" => VillageBuilder.Engine.World.DecorationType.FishInWater, // Well
+                        "🏛️" => VillageBuilder.Engine.World.DecorationType.TreeOak, // Town Hall
+
+                        // People/Status
+                        "👥" => VillageBuilder.Engine.World.DecorationType.TreeOak, // Families
+                        "💾" => VillageBuilder.Engine.World.DecorationType.RockPebble, // Save
+
+                        // Tasks
+                        "💤" => VillageBuilder.Engine.World.DecorationType.FlowerWild, // Sleeping
+                        "🚶" => VillageBuilder.Engine.World.DecorationType.GrassTuft, // Walking
+                        "😌" => VillageBuilder.Engine.World.DecorationType.FlowerRare, // Resting
+                        "🧍" => VillageBuilder.Engine.World.DecorationType.GrassTuft, // Idle
+                        "🏗️" => VillageBuilder.Engine.World.DecorationType.LogFallen, // Constructing
+
+                        // Log levels
+                        "ℹ️" => VillageBuilder.Engine.World.DecorationType.BirdPerched, // Info
+                        "⚠️" => VillageBuilder.Engine.World.DecorationType.FlowerWild, // Warning
+                        "❌" => VillageBuilder.Engine.World.DecorationType.RockBoulder, // Error
+                        "✅" => VillageBuilder.Engine.World.DecorationType.FlowerRare, // Success
+
+                        _ => null
+                    };
+                }
+
+                /// <summary>
+                /// Check if a string contains emoji characters
+                /// </summary>
+                private static bool IsEmoji(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return false;
+
+            // Check first character - emojis are in high Unicode ranges
+            int codepoint = char.ConvertToUtf32(text, 0);
+
+            // Emoji ranges:
+            // 0x1F300-0x1F9FF: Misc Symbols and Pictographs, Emoticons, Transport, etc.
+            // 0x2600-0x26FF: Misc symbols (some emojis)
+            return codepoint >= 0x1F300 || (codepoint >= 0x2600 && codepoint <= 0x26FF);
         }
 
         // Add helper method for measuring text correctly

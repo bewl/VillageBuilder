@@ -1,5 +1,6 @@
 using VillageBuilder.Engine.Buildings;
 using VillageBuilder.Engine.Entities;
+using VillageBuilder.Engine.World;
 
 namespace VillageBuilder.Game.Core
 {
@@ -7,7 +8,8 @@ namespace VillageBuilder.Game.Core
     {
         None,
         Person,
-        Building
+        Building,
+        Tile  // NEW: Tile selection type
     }
 
     public class SelectionManager
@@ -15,7 +17,8 @@ namespace VillageBuilder.Game.Core
         public SelectionType CurrentSelectionType { get; private set; }
         public Person? SelectedPerson { get; private set; }
         public Building? SelectedBuilding { get; private set; }
-        
+        public Tile? SelectedTile { get; private set; }  // NEW: Selected tile
+
         // For paging through multiple people on same tile
         public int SelectedPersonIndex { get; private set; }
         public List<Person>? PeopleAtSelectedTile { get; private set; }
@@ -25,10 +28,11 @@ namespace VillageBuilder.Game.Core
             CurrentSelectionType = SelectionType.Person;
             SelectedPerson = person;
             SelectedBuilding = null;
+            SelectedTile = null;  // Clear tile selection
             SelectedPersonIndex = 0;
             PeopleAtSelectedTile = null;
         }
-        
+
         public void SelectPeopleAtTile(List<Person> peopleAtTile, int initialIndex = 0)
         {
             if (peopleAtTile == null || peopleAtTile.Count == 0) return;
@@ -41,6 +45,7 @@ namespace VillageBuilder.Game.Core
             SelectedPersonIndex = Math.Clamp(initialIndex, 0, peopleCopy.Count - 1);
             SelectedPerson = peopleCopy[SelectedPersonIndex];
             SelectedBuilding = null;
+            SelectedTile = null;  // Clear tile selection
         }
         
         public void CycleNextPerson()
@@ -79,6 +84,20 @@ namespace VillageBuilder.Game.Core
             CurrentSelectionType = SelectionType.Building;
             SelectedBuilding = building;
             SelectedPerson = null;
+            SelectedTile = null;  // Clear tile selection
+            SelectedPersonIndex = 0;
+            PeopleAtSelectedTile = null;
+        }
+
+        /// <summary>
+        /// Select a tile for inspection (NEW)
+        /// </summary>
+        public void SelectTile(Tile tile)
+        {
+            CurrentSelectionType = SelectionType.Tile;
+            SelectedTile = tile;
+            SelectedPerson = null;
+            SelectedBuilding = null;
             SelectedPersonIndex = 0;
             PeopleAtSelectedTile = null;
         }
@@ -88,6 +107,7 @@ namespace VillageBuilder.Game.Core
             CurrentSelectionType = SelectionType.None;
             SelectedPerson = null;
             SelectedBuilding = null;
+            SelectedTile = null;  // Clear tile selection
             SelectedPersonIndex = 0;
             PeopleAtSelectedTile = null;
         }

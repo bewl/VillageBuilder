@@ -18,16 +18,46 @@
 
   <ItemGroup>
     <Folder Include="Assets\Fonts\" />
+    <Folder Include="assets\sprites\emojis\" />
     <Folder Include="UI\Services\" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Assets\Fonts\JetBrainsMono-Regular.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Fonts\NotoColorEmoji.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Assets\Fonts\CascadiaCode.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Fonts\CascadiaMono.ttf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Assets\Fonts\DejaVuSansMono.ttf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
+
+      <!-- Emoji sprites for modern terrain rendering -->
+      <None Update="assets\sprites\emojis\1f332.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1f333.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1f338.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1f33a.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1f33c.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1f33e.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1f33f.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1f344.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1f41f.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1f426.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1f430.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1f985.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1f98b.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1f98c.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1f99c.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1faa8.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1fab5.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+      <None Update="assets\sprites\emojis\1fad0.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+    </ItemGroup>
 
 </Project>

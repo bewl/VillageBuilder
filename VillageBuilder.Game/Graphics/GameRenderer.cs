@@ -205,7 +205,7 @@ namespace VillageBuilder.Game.Graphics
             {
                 var mousePos = Raylib.GetMousePosition();
                 bool clickHandled = false;
-                
+
                 // Check if clicking on sidebar (right 30% of screen)
                 int sidebarX = (int)(GraphicsConfig.ScreenWidth * 0.7f);
                 if (mousePos.X >= sidebarX)
@@ -213,7 +213,7 @@ namespace VillageBuilder.Game.Graphics
                     // Click is on sidebar, don't handle as entity selection
                     clickHandled = true;
                 }
-                
+
                 if (!clickHandled)
                 {
                     if (_selectedBuildingType.HasValue)
@@ -223,32 +223,50 @@ namespace VillageBuilder.Game.Graphics
                     }
                     else
                     {
-                        // Select entity - check for families first
+                        // NEW: Check for Ctrl modifier to force tile selection
+                        bool forceTileSelection = Raylib.IsKeyDown(KeyboardKey.LeftControl) || 
+                                                 Raylib.IsKeyDown(KeyboardKey.RightControl);
+
                         var clickedTile = _engine.Grid.GetTile((int)(_mouseWorldPos.X / GraphicsConfig.TileSize), 
                                                                (int)(_mouseWorldPos.Y / GraphicsConfig.TileSize));
 
-                        if (clickedTile != null && clickedTile.PeopleOnTile.Count > 0)
+                        if (clickedTile != null)
                         {
-                            // Find the family at this position (families always render together)
-                            // Select all members of that family
-                            var personAtTile = clickedTile.PeopleOnTile[0];
-                            var family = personAtTile.Family;
-
-                            if (family != null)
+                            // Priority 1: Force tile selection with Ctrl
+                            if (forceTileSelection)
                             {
-                                // Select entire family
-                                var familyMembers = family.Members.Where(m => m.IsAlive).ToList();
-                                _selectionManager.SelectPeopleAtTile(familyMembers);
+                                _selectionManager.SelectTile(clickedTile);
                             }
+                            // Priority 2: Select people if present (default behavior)
+                            else if (clickedTile.PeopleOnTile.Count > 0)
+                            {
+                                // Find the family at this position (families always render together)
+                                // Select all members of that family
+                                var personAtTile = clickedTile.PeopleOnTile[0];
+                                var family = personAtTile.Family;
+
+                                if (family != null)
+                                {
+                                    // Select entire family
+                                    var familyMembers = family.Members.Where(m => m.IsAlive).ToList();
+                                    _selectionManager.SelectPeopleAtTile(familyMembers);
+                                }
+                                else
+                                {
+                                    // Fallback: select just this person
+                                    _selectionManager.SelectPeopleAtTile(clickedTile.PeopleOnTile);
+                                }
+                            }
+                            // Priority 3: Select building if present
+                            else if (_hoveredBuilding != null)
+                            {
+                                _selectionManager.SelectBuilding(_hoveredBuilding);
+                            }
+                            // Priority 4: Select empty tile (auto tile inspection)
                             else
                             {
-                                // Fallback: select just this person
-                                _selectionManager.SelectPeopleAtTile(clickedTile.PeopleOnTile);
+                                _selectionManager.SelectTile(clickedTile);
                             }
-                        }
-                        else if (_hoveredBuilding != null)
-                        {
-                            _selectionManager.SelectBuilding(_hoveredBuilding);
                         }
                         else
                         {

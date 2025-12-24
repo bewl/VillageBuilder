@@ -13,7 +13,8 @@ namespace VillageBuilder.Game.Graphics.UI
 {
     public class MapRenderer
     {
-        private const int FontSize = 16;
+        // Font size now dynamic from GraphicsConfig
+        private static int FontSize => GraphicsConfig.SmallConsoleFontSize;
 
         public void Render(GameEngine engine, Camera2D camera, VillageBuilder.Game.Core.SelectionManager? selectionManager = null)
         {
@@ -62,31 +63,40 @@ namespace VillageBuilder.Game.Graphics.UI
                         continue;
                     }
 
-                    // Draw tile background (only for non-building tiles)
-                    var bgColor = GetTileBackgroundColor(tile);
-                    
-                    // Apply darkness overlay for night
-                    if (darknessFactor > 0)
-                    {
-                        bgColor = DarkenColor(bgColor, darknessFactor);
-                    }
-                    
-                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, tileSize, tileSize, bgColor);
+                        // Draw tile background (only for non-building tiles)
+                        var bgColor = GetTileBackgroundColor(tile);
 
-                    // Draw tile glyph
-                    DrawTileGlyph(tile, pos, tileSize, darknessFactor);
-                }
+                        // Apply darkness overlay for night
+                        if (darknessFactor > 0)
+                        {
+                            bgColor = DarkenColor(bgColor, darknessFactor);
+                        }
+
+                        Raylib.DrawRectangle((int)pos.X, (int)pos.Y, tileSize, tileSize, bgColor);
+
+                        // Draw base tile glyph with variation
+                        DrawTileGlyph(tile, pos, tileSize, darknessFactor);
+
+                        // NEW: Draw terrain decorations on top
+                        DrawTerrainDecorations(tile, pos, tileSize, darknessFactor, engine.Time);
+                    }
             }
             
             // Render people on top of everything
             RenderPeople(engine, tileSize, minX, maxX, minY, maxY, selectionManager);
             
-            // Render selection indicators for buildings
-            if (selectionManager?.SelectedBuilding != null)
-            {
-                DrawBuildingSelection(selectionManager.SelectedBuilding, tileSize);
+                // Render selection indicators for buildings
+                if (selectionManager?.SelectedBuilding != null)
+                {
+                    DrawBuildingSelection(selectionManager.SelectedBuilding, tileSize);
+                }
+
+                // Render selection indicator for tiles
+                if (selectionManager?.SelectedTile != null)
+                {
+                    DrawTileSelection(selectionManager.SelectedTile, tileSize);
+                }
             }
-        }
 
         private void DrawDetailedBuilding(Building building, int tileSize, GameTime time)
         {
@@ -452,18 +462,145 @@ namespace VillageBuilder.Game.Graphics.UI
             }
         }
 
+        private void DrawTileSelection(Tile tile, int tileSize)
+        {
+            var pos = new Vector2(tile.X * tileSize, tile.Y * tileSize);
+
+            // Draw subtle highlight - semi-transparent white overlay
+            Raylib.DrawRectangle((int)pos.X, (int)pos.Y, tileSize, tileSize, new Color(255, 255, 255, 30));
+
+            // Draw cyan border for selected tile
+            Raylib.DrawRectangleLines((int)pos.X, (int)pos.Y, tileSize, tileSize, new Color(100, 200, 255, 200));
+        }
+
         private string GetTileGlyph(Tile tile)
         {
+            // Use terrain variant for visual variety (0-3)
+            int variant = tile.TerrainVariant;
+
             return tile.Type switch
             {
-                TileType.Grass => "\"",
-                TileType.Forest => "♣",
-                TileType.Water => "≈",
-                TileType.Mountain => "▲",
+                // Grass - multiple variants for natural look
+                TileType.Grass => variant switch
+                {
+                    0 => "\"",
+                    1 => "'",
+                    2 => ",",
+                    _ => "."
+                },
+
+                // Forest - tree variations
+                TileType.Forest => variant switch
+                {
+                    0 => "♣",
+                    1 => "♠",
+                    2 => "↟",
+                    _ => "↑"
+                },
+
+                // Water - wave variations
+                TileType.Water => variant switch
+                {
+                    0 => "≈",
+                    1 => "~",
+                    2 => "∼",
+                    _ => "≋"
+                },
+
+                // Mountain - rock variations
+                TileType.Mountain => variant switch
+                {
+                    0 => "▲",
+                    1 => "▴",
+                    2 => "△",
+                    _ => "⌃"
+                },
+
                 TileType.Field => "≡",
                 TileType.Road => "·",
                 _ => "?"
             };
         }
+
+        /// <summary>
+        /// Render terrain decorations for visual richness and life
+        /// </summary>
+        private void DrawTerrainDecorations(Tile tile, Vector2 pos, int size, float darknessFactor, GameTime time)
+        {
+            if (tile.Decorations.Count == 0) return;
+
+            // Get time of day as 0-1 float (0 = midnight, 0.5 = noon)
+            float timeOfDay = time.Hour / 24f;
+            int seasonIndex = (int)time.CurrentSeason;
+
+                foreach (var decoration in tile.Decorations)
+                {
+                    // Get decoration color
+                    var decorColor = decoration.GetColor(seasonIndex, timeOfDay);
+
+                    // Convert DecorationColor to Raylib Color
+                    var color = new Color(decorColor.R, decorColor.G, decorColor.B, decorColor.A);
+
+                    // Apply darkness
+                    if (darknessFactor > 0)
+                    {
+                        color = DarkenColor(color, darknessFactor);
+                    }
+
+                    // Calculate position with slight offset based on decoration type
+                    // This prevents all decorations from rendering at exact tile center
+                    int offsetX = 0;
+                    int offsetY = 0;
+
+                    // Offset wildlife and some plants for more natural placement
+                    switch (decoration.Type)
+                    {
+                        case VillageBuilder.Engine.World.DecorationType.BirdFlying:
+                        case VillageBuilder.Engine.World.DecorationType.Butterfly:
+                            // Flying creatures - offset based on animation phase
+                            offsetX = (int)(Math.Sin(decoration.AnimationPhase * Math.PI * 2) * 3);
+                            offsetY = (int)(Math.Cos(decoration.AnimationPhase * Math.PI * 2) * 2);
+                            break;
+
+                        case VillageBuilder.Engine.World.DecorationType.GrassTuft:
+                        case VillageBuilder.Engine.World.DecorationType.FlowerWild:
+                            // Slight offset for natural scattering
+                            offsetX = (decoration.VariantIndex % 2 == 0) ? 2 : -2;
+                            offsetY = (decoration.VariantIndex > 1) ? 2 : -2;
+                            break;
+                    }
+
+                    // NEW: Sprite-based rendering (modern, colorful emojis)
+                    if (GraphicsConfig.UseSpriteMode)
+                    {
+                        var sprite = SpriteAtlasManager.Instance.GetSprite(decoration.Type);
+
+                        if (sprite.HasValue)
+                        {
+                            // Render sprite texture centered in tile
+                            int spriteSize = (int)(size * 0.9f); // Slightly smaller than tile for padding
+                            int spriteX = (int)pos.X + (size - spriteSize) / 2 + offsetX;
+                            int spriteY = (int)pos.Y + (size - spriteSize) / 2 + offsetY;
+
+                            var sourceRect = new Rectangle(0, 0, sprite.Value.Width, sprite.Value.Height);
+                            var destRect = new Rectangle(spriteX, spriteY, spriteSize, spriteSize);
+                            var origin = new System.Numerics.Vector2(0, 0);
+
+                            // Render sprite with color tinting (for day/night and seasonal effects)
+                            Raylib.DrawTexturePro(sprite.Value, sourceRect, destRect, origin, 0f, color);
+                            continue; // Skip text rendering
+                        }
+                    }
+
+                    // FALLBACK: Text-based rendering (ASCII symbols)
+                    // Used when sprite mode is disabled or sprite not available
+                    string glyph = decoration.GetGlyph();
+                    int textX = (int)pos.X + (size - FontSize) / 2 + offsetX;
+                    int textY = (int)pos.Y + (size - FontSize) / 2 + offsetY;
+
+                    // Render decoration with automatic font selection (emoji font for emojis)
+                    GraphicsConfig.DrawConsoleTextAuto(glyph, textX, textY, FontSize, color);
+                }
+            }
     }
 }

@@ -7,6 +7,7 @@ This directory contains detailed documentation for all resolved bugs and issues 
 ## Index by Category
 
 ### Graphics & Rendering
+- [DYNAMIC_FONT_SCALING_FIX.md](DYNAMIC_FONT_SCALING_FIX.md) - Font size scales with screen resolution
 - [VIEWPORT_RESOLUTION_FIX.md](VIEWPORT_RESOLUTION_FIX.md) - Fixed viewport not matching window size
 - [BORDERLESS_FULLSCREEN_FIX.md](BORDERLESS_FULLSCREEN_FIX.md) - Fixed monitor resolution detection
 - [FONT_CONFIGURATION.md](FONT_CONFIGURATION.md) - Font system with full Unicode support
@@ -36,6 +37,7 @@ This directory contains detailed documentation for all resolved bugs and issues 
 | [Construction Hunger Bug](BUGFIX_CONSTRUCTION_HUNGER.md) | Construction | Medium | ? Fixed |
 | [Construction Presence](CONSTRUCTION_PRESENCE_REQUIREMENT.md) | Construction | Medium | ? Fixed |
 | [Construction Worker Return](CONSTRUCTION_WORKER_RETURN_FIX.md) | Construction | High | ? Fixed |
+| [Dynamic Font Scaling](DYNAMIC_FONT_SCALING_FIX.md) | Graphics | High | ? Fixed |
 | [Font Configuration](FONT_CONFIGURATION.md) | Graphics | Medium | ? Fixed |
 | [Font Quick Setup](FONT_QUICK_SETUP.md) | Graphics | Low | ? Guide |
 | [Multi-Person Flicker](MULTI_PERSON_SELECTION_FLICKER_FIX.md) | UI | Low | ? Fixed |

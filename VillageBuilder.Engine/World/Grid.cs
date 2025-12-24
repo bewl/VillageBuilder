@@ -3,64 +3,10 @@ using VillageBuilder.Engine.Entities;
 
 namespace VillageBuilder.Engine.World
 {
-    public enum TileType
-    {
-        Grass,
-        Forest,
-        Water,
-        Mountain,
-        Field,
-        Road,
-        BuildingFoundation
-    }
-
-    public class Tile
-    {
-        public int X { get; }
-        public int Y { get; }
-        public TileType Type { get; set; }
-        public Building? Building { get; set; }
-        public List<Person> PeopleOnTile { get; } // Track all people on this tile
-        
-        public bool IsWalkable
-        {
-            get
-            {
-                // Water and mountains are never walkable
-                if (Type == TileType.Water || Type == TileType.Mountain)
-                    return false;
-                
-                // If no building, tile is walkable
-                if (Building == null)
-                    return true;
-                
-                // If there's a building, check what type of building tile this is
-                var buildingTile = Building.GetTileAtWorldPosition(X, Y);
-                if (buildingTile.HasValue)
-                {
-                    // Floors are always walkable (interior navigation)
-                    if (buildingTile.Value.Type == BuildingTileType.Floor)
-                        return true;
-                    
-                    // Doors are walkable if building doors are open
-                    if (buildingTile.Value.Type == BuildingTileType.Door && Building.DoorsOpen)
-                        return true;
-                }
-                
-                // Walls and other building tiles are not walkable
-                return false;
-            }
-        }
-
-        public Tile(int x, int y, TileType type)
-        {
-            X = x;
-            Y = y;
-            Type = type;
-            PeopleOnTile = new List<Person>();
-        }
-    }
-
+    /// <summary>
+    /// Represents the game world grid containing all tiles.
+    /// Manages tile access, generation, and spatial queries.
+    /// </summary>
     public class VillageGrid
     {
         public int Width { get; }

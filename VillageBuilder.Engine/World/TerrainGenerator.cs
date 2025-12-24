@@ -77,11 +77,14 @@ namespace VillageBuilder.Engine.World
                 }
             }
 
-            // Smooth terrain - reduce noise
-            SmoothTerrain(tiles);
+                // Smooth terrain - reduce noise
+                SmoothTerrain(tiles);
 
-            return tiles;
-        }
+                // NEW: Add decorations for visual variety and life
+                PlaceTerrainDecorations(tiles);
+
+                return tiles;
+            }
 
         private float[,] GeneratePerlinNoise(int width, int height, int octaves, float persistence, float scale)
         {
@@ -301,21 +304,342 @@ namespace VillageBuilder.Engine.World
             }
         }
 
-        // Initialize permutation table
-        public void InitializePermutation(int seed)
-        {
-            var rng = new Random(seed);
-            for (int i = 0; i < 256; i++)
-            {
-                _permutation[i] = i;
-            }
-            
-            // Fisher-Yates shuffle
-            for (int i = 255; i > 0; i--)
-            {
-                int j = rng.Next(i + 1);
-                (_permutation[i], _permutation[j]) = (_permutation[j], _permutation[i]);
+                // Initialize permutation table
+                public void InitializePermutation(int seed)
+                {
+                    var rng = new Random(seed);
+                    for (int i = 0; i < 256; i++)
+                    {
+                        _permutation[i] = i;
+                    }
+
+                    // Fisher-Yates shuffle
+                    for (int i = 255; i > 0; i--)
+                    {
+                        int j = rng.Next(i + 1);
+                        (_permutation[i], _permutation[j]) = (_permutation[j], _permutation[i]);
+                    }
+                }
+
+                /// <summary>
+                /// Place terrain decorations to add visual variety and life
+                /// </summary>
+                private void PlaceTerrainDecorations(Tile[,] tiles)
+                {
+                    for (int x = 0; x < _width; x++)
+                    {
+                        for (int y = 0; y < _height; y++)
+                        {
+                            var tile = tiles[x, y];
+                            var height = _heightMap[x, y];
+                            var moisture = _moistureMap[x, y];
+
+                            // Place decorations based on tile type and environment
+                            switch (tile.Type)
+                            {
+                                case TileType.Grass:
+                                    PlaceGrassDecorations(tile, height, moisture);
+                                    break;
+
+                                case TileType.Forest:
+                                    PlaceForestDecorations(tile, height, moisture);
+                                    break;
+
+                                case TileType.Water:
+                                    PlaceWaterDecorations(tile);
+                                    break;
+
+                                case TileType.Mountain:
+                                    PlaceMountainDecorations(tile, height);
+                                    break;
+                            }
+                        }
+                    }
+                }
+
+                private void PlaceGrassDecorations(Tile tile, float height, float moisture)
+                {
+                    // Grass tufts (common)
+                    if (_random.NextDouble() < 0.3)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.GrassTuft, 
+                            tile.X, 
+                            tile.Y, 
+                            _random.Next(4)
+                        ));
+                    }
+
+                    // Wildflowers (less common, more in moist areas)
+                    if (moisture > 0.5f && _random.NextDouble() < 0.15)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.FlowerWild, 
+                            tile.X, 
+                            tile.Y,
+                            _random.Next(4)
+                        ));
+                    }
+
+                    // Rare flowers (very uncommon)
+                    if (_random.NextDouble() < 0.03)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.FlowerRare, 
+                            tile.X, 
+                            tile.Y,
+                            _random.Next(3)
+                        ));
+                    }
+
+                    // Scattered bushes
+                    if (moisture > 0.55f && _random.NextDouble() < 0.08)
+                    {
+                        var bushType = _random.NextDouble() < 0.7 
+                            ? DecorationType.BushRegular 
+                            : DecorationType.BushBerry;
+                        tile.Decorations.Add(new TerrainDecoration(
+                            bushType, 
+                            tile.X, 
+                            tile.Y,
+                            _random.Next(3)
+                        ));
+                    }
+
+                    // Occasional rocks
+                    if (_random.NextDouble() < 0.05)
+                    {
+                        var rockType = _random.NextDouble() < 0.3 
+                            ? DecorationType.RockBoulder 
+                            : DecorationType.RockPebble;
+                        tile.Decorations.Add(new TerrainDecoration(
+                            rockType, 
+                            tile.X, 
+                            tile.Y,
+                            _random.Next(3)
+                        ));
+                    }
+
+                    // Tall grass patches
+                    if (moisture > 0.6f && _random.NextDouble() < 0.12)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.TallGrass, 
+                            tile.X, 
+                            tile.Y
+                        ));
+                    }
+
+                    // Wildlife - rabbits (rare)
+                    if (_random.NextDouble() < 0.01)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.RabbitSmall, 
+                            tile.X, 
+                            tile.Y
+                        ));
+                    }
+
+                    // Wildlife - grazing deer (very rare)
+                    if (_random.NextDouble() < 0.005)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.DeerGrazing, 
+                            tile.X, 
+                            tile.Y
+                        ));
+                    }
+
+                    // Butterflies (uncommon, more in flowery areas)
+                    if (moisture > 0.5f && _random.NextDouble() < 0.08)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.Butterfly, 
+                            tile.X, 
+                            tile.Y,
+                            _random.Next(3)
+                        ));
+                    }
+                }
+
+                private void PlaceForestDecorations(Tile tile, float height, float moisture)
+                {
+                    // Dense trees (Forest tiles should have trees!)
+                    if (_random.NextDouble() < 0.7)
+                    {
+                        var treeType = moisture > 0.6f 
+                            ? DecorationType.TreeOak 
+                            : DecorationType.TreePine;
+
+                        tile.Decorations.Add(new TerrainDecoration(
+                            treeType, 
+                            tile.X, 
+                            tile.Y,
+                            _random.Next(2)
+                        ));
+                    }
+
+                    // Undergrowth
+                    if (_random.NextDouble() < 0.4)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.Fern, 
+                            tile.X, 
+                            tile.Y
+                        ));
+                    }
+
+                    // Bushes in forest
+                    if (_random.NextDouble() < 0.3)
+                    {
+                        var bushType = _random.NextDouble() < 0.5 
+                            ? DecorationType.BushRegular 
+                            : DecorationType.BushBerry;
+                        tile.Decorations.Add(new TerrainDecoration(
+                            bushType, 
+                            tile.X, 
+                            tile.Y,
+                            _random.Next(3)
+                        ));
+                    }
+
+                    // Mushrooms
+                    if (_random.NextDouble() < 0.15)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.Mushroom, 
+                            tile.X, 
+                            tile.Y,
+                            _random.Next(3)
+                        ));
+                    }
+
+                    // Old stumps
+                    if (_random.NextDouble() < 0.05)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.StumpOld, 
+                            tile.X, 
+                            tile.Y
+                        ));
+                    }
+
+                    // Fallen logs
+                    if (_random.NextDouble() < 0.08)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.LogFallen, 
+                            tile.X, 
+                            tile.Y
+                        ));
+                    }
+
+                    // Dead trees (rare)
+                    if (_random.NextDouble() < 0.03)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.TreeDead, 
+                            tile.X, 
+                            tile.Y
+                        ));
+                    }
+
+                    // Birds perched on trees
+                    if (_random.NextDouble() < 0.1)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.BirdPerched, 
+                            tile.X, 
+                            tile.Y
+                        ));
+                    }
+
+                    // Flying birds
+                    if (_random.NextDouble() < 0.05)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.BirdFlying, 
+                            tile.X, 
+                            tile.Y,
+                            _random.Next(3)
+                        ));
+                    }
+                }
+
+                private void PlaceWaterDecorations(Tile tile)
+                {
+                    // Reeds along edges (check if near land)
+                    bool nearLand = false;
+                    for (int dx = -1; dx <= 1 && !nearLand; dx++)
+                    {
+                        for (int dy = -1; dy <= 1 && !nearLand; dy++)
+                        {
+                            int nx = tile.X + dx;
+                            int ny = tile.Y + dy;
+                            if (nx >= 0 && nx < _width && ny >= 0 && ny < _height)
+                            {
+                                if (_heightMap[nx, ny] > 0.3f) // Not water
+                                {
+                                    nearLand = true;
+                                }
+                            }
+                        }
+                    }
+
+                    if (nearLand && _random.NextDouble() < 0.3)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.Reeds, 
+                            tile.X, 
+                            tile.Y
+                        ));
+                    }
+
+                    // Fish swimming
+                    if (_random.NextDouble() < 0.1)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.FishInWater, 
+                            tile.X, 
+                            tile.Y
+                        ));
+                    }
+                }
+
+                private void PlaceMountainDecorations(Tile tile, float height)
+                {
+                    // Rocks and boulders (common on mountains)
+                    if (_random.NextDouble() < 0.4)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.RockBoulder, 
+                            tile.X, 
+                            tile.Y,
+                            _random.Next(3)
+                        ));
+                    }
+
+                    // Scattered pine trees on lower slopes
+                    if (height < 0.75f && _random.NextDouble() < 0.2)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.TreePine, 
+                            tile.X, 
+                            tile.Y,
+                            _random.Next(2)
+                        ));
+                    }
+
+                    // Birds of prey
+                    if (_random.NextDouble() < 0.05)
+                    {
+                        tile.Decorations.Add(new TerrainDecoration(
+                            DecorationType.BirdFlying, 
+                            tile.X, 
+                            tile.Y,
+                            0  // Eagles/hawks variant
+                        ));
+                    }
+                }
             }
         }
-    }
-}

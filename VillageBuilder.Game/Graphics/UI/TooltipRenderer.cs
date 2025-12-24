@@ -11,7 +11,8 @@ namespace VillageBuilder.Game.Graphics.UI
     {
         private const int Padding = 8;
         private const int LineHeight = 22;
-        private const int FontSize = 18;
+        // Font size now dynamic from GraphicsConfig
+        private static int FontSize => GraphicsConfig.ConsoleFontSize;
         private const int MaxWidth = 350;
 
         public void RenderTooltip(GameEngine engine, Person? hoveredPerson, Building? hoveredBuilding, int mouseX, int mouseY)

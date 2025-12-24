@@ -241,13 +241,16 @@ namespace VillageBuilder.Engine.Core
             {
                 TransferBuildingProduction();
             }
-            
+
+            // NEW: Update terrain decoration animations (every tick for smooth animation)
+            UpdateTerrainAnimations(1f / 60f); // Assuming 60 TPS
+
             // Move people along their paths every tick
             foreach (var family in Families)
             {
                 // Track families that have arrived at work this tick (for logging)
                 var arrivedFamilies = new Dictionary<Building, List<Person>>();
-                
+
                 foreach (var person in family.Members)
                 {
                     // Move people along their paths (with collision avoidance)
@@ -654,30 +657,53 @@ namespace VillageBuilder.Engine.Core
                 if (path != null && path.Count > 0)
                 {
                     person.SetPath(path);
-                    person.CurrentTask = PersonTask.GoingToWork;
-                    return;
-                }
-            }
-            
-            // Fallback: go to door if interior not accessible
-            var doorPositions = person.AssignedBuilding.GetDoorPositions();
-            if (doorPositions.Count > 0)
-            {
-                var targetDoor = doorPositions[0];
-                var path = Pathfinding.FindPath(person.Position, targetDoor, Grid);
-                
-                if (path != null && path.Count > 0)
-                {
-                    person.SetPath(path);
-                    person.CurrentTask = PersonTask.GoingToWork;
-                }
-            }
-        }
+                                person.CurrentTask = PersonTask.GoingToWork;
+                                return;
+                            }
+                        }
 
-        /// <summary>
-        /// Send a person home to their family house
-        /// </summary>
-        private void SendPersonHome(Person person)
+                        // Fallback: go to door if interior not accessible
+                        var doorPositions = person.AssignedBuilding.GetDoorPositions();
+                        if (doorPositions.Count > 0)
+                        {
+                            var targetDoor = doorPositions[0];
+                            var path = Pathfinding.FindPath(person.Position, targetDoor, Grid);
+
+                            if (path != null && path.Count > 0)
+                            {
+                                person.SetPath(path);
+                                person.CurrentTask = PersonTask.GoingToWork;
+                            }
+                        }
+                    }
+
+                    /// <summary>
+                    /// Update terrain decoration animations for smooth visual effects
+                    /// </summary>
+                    private void UpdateTerrainAnimations(float deltaTime)
+                    {
+                        // Update decorations on visible tiles only (optimization)
+                        // For now, update all - could be optimized with viewport culling later
+                        for (int x = 0; x < Grid.Width; x++)
+                        {
+                            for (int y = 0; y < Grid.Height; y++)
+                            {
+                                var tile = Grid.GetTile(x, y);
+                                if (tile != null && tile.Decorations.Count > 0)
+                                {
+                                    foreach (var decoration in tile.Decorations)
+                                    {
+                                        decoration.UpdateAnimation(deltaTime);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    /// <summary>
+                    /// Send a person home to their family house
+                    /// </summary>
+                    private void SendPersonHome(Person person)
         {
             Vector2Int targetPosition;
 
