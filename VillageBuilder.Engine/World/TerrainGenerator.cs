@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using VillageBuilder.Engine.Config;
 
 namespace VillageBuilder.Engine.World
 {
@@ -8,14 +9,16 @@ namespace VillageBuilder.Engine.World
         private readonly int _width;
         private readonly int _height;
         private readonly Random _random;
+        private readonly TerrainConfig _config;
         private float[,] _heightMap;
         private float[,] _moistureMap;
 
-        public TerrainGenerator(int width, int height, int seed)
+        public TerrainGenerator(int width, int height, int seed, TerrainConfig? config = null)
         {
             _width = width;
             _height = height;
             _random = new Random(seed);
+            _config = config ?? GameConfig.Instance.Terrain;
         }
 
         public Tile[,] Generate()
@@ -359,8 +362,8 @@ namespace VillageBuilder.Engine.World
 
                 private void PlaceGrassDecorations(Tile tile, float height, float moisture)
                 {
-                    // Grass tufts (REDUCED for visual clarity: 30% → 8%)
-                    if (_random.NextDouble() < 0.08)
+                    // Grass tufts (CONFIGURABLE via TerrainConfig)
+                    if (_random.NextDouble() < _config.ApplyMultiplier(_config.GrassTuftDensity))
                     {
                         tile.Decorations.Add(new TerrainDecoration(
                             DecorationType.GrassTuft, 
@@ -370,8 +373,9 @@ namespace VillageBuilder.Engine.World
                         ));
                     }
 
-                    // Wildflowers (REDUCED for visual clarity: 15% → 5%)
-                    if (moisture > 0.5f && _random.NextDouble() < 0.05)
+                    // Wildflowers (CONFIGURABLE via TerrainConfig)
+                    if (moisture > _config.MinMoistureForFlowers && 
+                        _random.NextDouble() < _config.ApplyMultiplier(_config.WildflowerDensity))
                     {
                         tile.Decorations.Add(new TerrainDecoration(
                             DecorationType.FlowerWild, 
@@ -381,8 +385,8 @@ namespace VillageBuilder.Engine.World
                         ));
                     }
 
-                    // Rare flowers (very uncommon)
-                    if (_random.NextDouble() < 0.03)
+                    // Rare flowers (CONFIGURABLE via TerrainConfig)
+                    if (_random.NextDouble() < _config.ApplyMultiplier(_config.RareFlowerDensity))
                     {
                         tile.Decorations.Add(new TerrainDecoration(
                             DecorationType.FlowerRare, 
@@ -392,8 +396,9 @@ namespace VillageBuilder.Engine.World
                         ));
                     }
 
-                    // Scattered bushes
-                    if (moisture > 0.55f && _random.NextDouble() < 0.08)
+                    // Scattered bushes (CONFIGURABLE via TerrainConfig)
+                    if (moisture > _config.MinMoistureForBushes && 
+                        _random.NextDouble() < _config.ApplyMultiplier(_config.BushDensity))
                     {
                         var bushType = _random.NextDouble() < 0.7 
                             ? DecorationType.BushRegular 
@@ -406,8 +411,8 @@ namespace VillageBuilder.Engine.World
                         ));
                     }
 
-                    // Occasional rocks (REDUCED for visual clarity: 5% → 2%)
-                    if (_random.NextDouble() < 0.02)
+                    // Occasional rocks (CONFIGURABLE via TerrainConfig)
+                    if (_random.NextDouble() < _config.ApplyMultiplier(_config.RockDensity))
                     {
                         var rockType = _random.NextDouble() < 0.3 
                             ? DecorationType.RockBoulder 
@@ -420,8 +425,9 @@ namespace VillageBuilder.Engine.World
                         ));
                     }
 
-                    // Tall grass patches (REDUCED for visual clarity: 12% → 4%)
-                    if (moisture > 0.6f && _random.NextDouble() < 0.04)
+                    // Tall grass patches (CONFIGURABLE via TerrainConfig)
+                    if (moisture > _config.MinMoistureForTallGrass && 
+                        _random.NextDouble() < _config.ApplyMultiplier(_config.TallGrassDensity))
                     {
                         tile.Decorations.Add(new TerrainDecoration(
                             DecorationType.TallGrass, 
@@ -430,8 +436,8 @@ namespace VillageBuilder.Engine.World
                         ));
                     }
 
-                    // Wildlife - rabbits (rare)
-                    if (_random.NextDouble() < 0.01)
+                    // Wildlife - rabbits (CONFIGURABLE - mostly filtered out by wildlife system)
+                    if (_random.NextDouble() < _config.ApplyMultiplier(_config.StaticRabbitDensity))
                     {
                         tile.Decorations.Add(new TerrainDecoration(
                             DecorationType.RabbitSmall, 
@@ -440,8 +446,8 @@ namespace VillageBuilder.Engine.World
                         ));
                     }
 
-                    // Wildlife - grazing deer (very rare)
-                    if (_random.NextDouble() < 0.005)
+                    // Wildlife - grazing deer (CONFIGURABLE - mostly filtered out by wildlife system)
+                    if (_random.NextDouble() < _config.ApplyMultiplier(_config.StaticDeerDensity))
                     {
                         tile.Decorations.Add(new TerrainDecoration(
                             DecorationType.DeerGrazing, 
@@ -464,8 +470,8 @@ namespace VillageBuilder.Engine.World
 
                 private void PlaceForestDecorations(Tile tile, float height, float moisture)
                 {
-                    // Dense trees (Forest tiles should have trees!)
-                    if (_random.NextDouble() < 0.7)
+                    // Dense trees (CONFIGURABLE via TerrainConfig)
+                    if (_random.NextDouble() < _config.ApplyMultiplier(_config.ForestTreeDensity))
                     {
                         var treeType = moisture > 0.6f 
                             ? DecorationType.TreeOak 
@@ -479,8 +485,8 @@ namespace VillageBuilder.Engine.World
                         ));
                     }
 
-                    // Undergrowth
-                    if (_random.NextDouble() < 0.4)
+                    // Undergrowth (CONFIGURABLE via TerrainConfig)
+                    if (_random.NextDouble() < _config.ApplyMultiplier(_config.ForestFernDensity))
                     {
                         tile.Decorations.Add(new TerrainDecoration(
                             DecorationType.Fern, 
@@ -489,8 +495,8 @@ namespace VillageBuilder.Engine.World
                         ));
                     }
 
-                    // Bushes in forest
-                    if (_random.NextDouble() < 0.3)
+                    // Bushes in forest (CONFIGURABLE via TerrainConfig)
+                    if (_random.NextDouble() < _config.ApplyMultiplier(_config.ForestBushDensity))
                     {
                         var bushType = _random.NextDouble() < 0.5 
                             ? DecorationType.BushRegular 
@@ -503,8 +509,8 @@ namespace VillageBuilder.Engine.World
                         ));
                     }
 
-                    // Mushrooms
-                    if (_random.NextDouble() < 0.15)
+                    // Mushrooms (CONFIGURABLE via TerrainConfig)
+                    if (_random.NextDouble() < _config.ApplyMultiplier(_config.ForestMushroomDensity))
                     {
                         tile.Decorations.Add(new TerrainDecoration(
                             DecorationType.Mushroom, 
@@ -514,7 +520,7 @@ namespace VillageBuilder.Engine.World
                         ));
                     }
 
-                    // Old stumps
+                    // Old stumps (hardcoded - rare feature)
                     if (_random.NextDouble() < 0.05)
                     {
                         tile.Decorations.Add(new TerrainDecoration(
@@ -586,7 +592,8 @@ namespace VillageBuilder.Engine.World
                         }
                     }
 
-                    if (nearLand && _random.NextDouble() < 0.3)
+                    // Reeds (CONFIGURABLE via TerrainConfig)
+                    if (nearLand && _random.NextDouble() < _config.ApplyMultiplier(_config.ReedDensity))
                     {
                         tile.Decorations.Add(new TerrainDecoration(
                             DecorationType.Reeds, 
