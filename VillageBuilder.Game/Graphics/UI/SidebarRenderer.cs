@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raylib_cs;
@@ -85,14 +85,31 @@ namespace VillageBuilder.Game.Graphics.UI
         {
             var headerColor = new Color(120, 200, 255, 255);
 
-            // Draw title with modern arrow decoration
-            GraphicsConfig.DrawConsoleTextAuto($"? {title}", _sidebarX + Padding, y, FontSize, headerColor);
+            // Draw arrow icon (sprite with ASCII fallback)
+            int currentX = _sidebarX + Padding;
+            currentX += GraphicsConfig.DrawUIIcon(
+                UIIconType.ArrowRight,
+                currentX, y,
+                FontSize,
+                headerColor,
+                ">"
+            );
+            currentX += 5;
 
-            // Draw horizontal line with block character
-            int lineX = _sidebarX + Padding + Raylib.MeasureText($"? {title} ", FontSize);
-            int remainingWidth = _sidebarWidth - Padding * 2 - (lineX - _sidebarX - Padding);
-            string line = new string('?', Math.Max(0, remainingWidth / 8));
-            GraphicsConfig.DrawConsoleTextAuto(line, lineX, y, FontSize, headerColor);
+            // Draw title text
+            GraphicsConfig.DrawConsoleText(title, currentX, y, FontSize, headerColor);
+            currentX += GraphicsConfig.MeasureText(title, FontSize) + 5;
+
+            // Draw horizontal line with sprite decorations
+            int remainingWidth = (_sidebarX + _sidebarWidth - Padding) - currentX;
+            GraphicsConfig.DrawUIDecorationLine(
+                UIIconType.SeparatorLine,
+                currentX, y,
+                remainingWidth,
+                FontSize,
+                headerColor,
+                '?'
+            );
         }
 
         private int RenderQuickStats(GameEngine engine, int startY)
@@ -108,15 +125,34 @@ namespace VillageBuilder.Game.Graphics.UI
             if (engine.Families.Any())
             {
                 var totalPopulation = engine.Families.Sum(f => f.Members.Count);
-                GraphicsConfig.DrawConsoleTextAuto($"¦ ? Families:    {engine.Families.Count}", _sidebarX + Padding, y, SmallFontSize, textColor);
+
+                // Draw families icon + text
+                var currentX = _sidebarX + Padding + 2;
+                currentX += GraphicsConfig.DrawUIIcon(
+                    UIIconType.People,
+                    currentX, y,
+                    SmallFontSize,
+                    textColor,
+                    "?"
+                );
+                GraphicsConfig.DrawConsoleText($" Families:    {engine.Families.Count}", currentX, y, SmallFontSize, textColor);
                 y += LineHeight;
-                
-                GraphicsConfig.DrawConsoleTextAuto($"¦   Population:  {totalPopulation}", _sidebarX + Padding, y, SmallFontSize, textColor);
+
+                GraphicsConfig.DrawConsoleText($"     Population:  {totalPopulation}", _sidebarX + Padding, y, SmallFontSize, textColor);
                 y += LineHeight;
             }
             else
             {
-                GraphicsConfig.DrawConsoleTextAuto("¦ ? No families yet", _sidebarX + Padding, y, SmallFontSize, dimColor);
+                // Draw families icon + text
+                var currentX = _sidebarX + Padding + 2;
+                currentX += GraphicsConfig.DrawUIIcon(
+                    UIIconType.People,
+                    currentX, y,
+                    SmallFontSize,
+                    dimColor,
+                    "?"
+                );
+                GraphicsConfig.DrawConsoleText(" No families yet", currentX, y, SmallFontSize, dimColor);
                 y += LineHeight;
             }
 
@@ -124,8 +160,16 @@ namespace VillageBuilder.Game.Graphics.UI
 
             // Buildings summary
             var constructedCount = engine.Buildings.Count(b => b.IsConstructed);
-            GraphicsConfig.DrawConsoleTextAuto($"¦ ¦ Buildings:   {constructedCount}/{engine.Buildings.Count}", 
-                _sidebarX + Padding, y, SmallFontSize, textColor);
+            var buildingX = _sidebarX + Padding + 2;
+            buildingX += GraphicsConfig.DrawUIIcon(
+                UIIconType.Construction,
+                buildingX, y,
+                SmallFontSize,
+                textColor,
+                "+"
+            );
+            GraphicsConfig.DrawConsoleText($" Buildings:   {constructedCount}/{engine.Buildings.Count}", 
+                buildingX, y, SmallFontSize, textColor);
             y += LineHeight + 5;
 
             var buildingGroups = engine.Buildings.GroupBy(b => b.Type).Take(5);
@@ -133,7 +177,7 @@ namespace VillageBuilder.Game.Graphics.UI
             {
                 var constructed = group.Count(b => b.IsConstructed);
                 var icon = GetBuildingAsciiIcon(group.Key);
-                GraphicsConfig.DrawConsoleTextAuto($"¦   {icon} {group.Key,-12} {constructed}", 
+                GraphicsConfig.DrawConsoleTextAuto($"     {icon} {group.Key,-12} {constructed}", 
                     _sidebarX + Padding, y, SmallFontSize, textColor);
                 y += LineHeight;
             }
@@ -154,21 +198,43 @@ namespace VillageBuilder.Game.Graphics.UI
                         ? "< 1 min ago" 
                         : $"{(int)timeSince.TotalMinutes} min ago";
 
-                    GraphicsConfig.DrawConsoleTextAuto($"¦ ? Last Save:  {timeText}", 
-                        _sidebarX + Padding, y, SmallFontSize, new Color(255, 200, 50, 255));
+                    var saveX = _sidebarX + Padding + 2;
+                    saveX += GraphicsConfig.DrawUIIcon(
+                        UIIconType.Save,
+                        saveX, y,
+                        SmallFontSize,
+                        new Color(255, 200, 50, 255),
+                        "?"
+                    );
+                    GraphicsConfig.DrawConsoleText($" Last Save:  {timeText}", 
+                        saveX, y, SmallFontSize, new Color(255, 200, 50, 255));
                     y += LineHeight;
                 }
             }
             else
             {
-                GraphicsConfig.DrawConsoleTextAuto("¦ ? No saves yet (F5)", 
-                                _sidebarX + Padding, y, SmallFontSize, dimColor);
+                var saveX = _sidebarX + Padding + 2;
+                saveX += GraphicsConfig.DrawUIIcon(
+                    UIIconType.Save,
+                    saveX, y,
+                    SmallFontSize,
+                    dimColor,
+                    "?"
+                );
+                GraphicsConfig.DrawConsoleText(" No saves yet (F5)", 
+                                saveX, y, SmallFontSize, dimColor);
                             y += LineHeight;
                         }
 
                         // Draw section separator
-                        GraphicsConfig.DrawConsoleTextAuto(new string('?', (_sidebarWidth - Padding * 2 - 8) / 8), 
-                            _sidebarX + Padding, y, FontSize, new Color(100, 100, 120, 255));
+                        GraphicsConfig.DrawUIDecorationLine(
+                            UIIconType.SeparatorLine,
+                            _sidebarX + Padding, y,
+                            _sidebarWidth - Padding * 2,
+                            FontSize,
+                            new Color(100, 100, 120, 255),
+                            '?'
+                        );
                         y += LineHeight;
 
                         return y + 5;
@@ -220,15 +286,21 @@ namespace VillageBuilder.Game.Graphics.UI
                 }
 
                 // Draw command in roguelike style
-                GraphicsConfig.DrawConsoleTextAuto($"¦ [{key,-5}]", _sidebarX + Padding, y, SmallFontSize, color);
+                GraphicsConfig.DrawConsoleTextAuto($"  [{key,-5}]", _sidebarX + Padding, y, SmallFontSize, color);
                 GraphicsConfig.DrawConsoleTextAuto(action, _sidebarX + Padding + 80, y, SmallFontSize, textColor);
 
                         y += LineHeight;
                     }
 
                     // Draw section separator
-                    GraphicsConfig.DrawConsoleTextAuto(new string('?', (_sidebarWidth - Padding * 2 - 8) / 8), 
-                        _sidebarX + Padding, y, FontSize, new Color(100, 100, 120, 255));
+                    GraphicsConfig.DrawUIDecorationLine(
+                        UIIconType.SeparatorLine,
+                        _sidebarX + Padding, y,
+                        _sidebarWidth - Padding * 2,
+                        FontSize,
+                        new Color(100, 100, 120, 255),
+                        '?'
+                    );
                     y += LineHeight;
 
                     return y + 5;
@@ -261,7 +333,7 @@ namespace VillageBuilder.Game.Graphics.UI
                 var prefix = GetLogPrefix(entry.Level);
                 
                 // Draw timestamp
-                GraphicsConfig.DrawConsoleTextAuto($"¦{time}", _sidebarX + Padding, messageY, 11, new Color(100, 100, 100, 255));
+                GraphicsConfig.DrawConsoleTextAuto($" {time}", _sidebarX + Padding, messageY, 11, new Color(100, 100, 100, 255));
                 
                 // Draw message with level indicator
                 var messageText = $"{prefix} {entry.Message}";
@@ -273,38 +345,56 @@ namespace VillageBuilder.Game.Graphics.UI
                         messageY += 15;
                     }
 
-                    // Draw bottom border
-                    var bottomY = y + logHeight;
-                    GraphicsConfig.DrawConsoleTextAuto(new string('?', (_sidebarWidth - Padding * 2 - 8) / 8), 
-                        _sidebarX + Padding, bottomY, FontSize, new Color(100, 100, 120, 255));
-                }
+                            // Draw bottom border
+                            var bottomY = y + logHeight;
+                            GraphicsConfig.DrawUIDecorationLine(
+                                UIIconType.SeparatorLine,
+                                _sidebarX + Padding, bottomY,
+                                _sidebarWidth - Padding * 2,
+                                FontSize,
+                                new Color(100, 100, 120, 255),
+                                '?'
+                            );
+                        }
 
-                private string GetBuildingAsciiIcon(BuildingType type)
-        {
-            return type switch
-            {
-                BuildingType.House => "??",
-                BuildingType.Farm => "??",
-                BuildingType.Warehouse => "??",
-                BuildingType.Mine => "??",
-                BuildingType.Lumberyard => "??",
-                BuildingType.Workshop => "??",
-                BuildingType.Market => "??",
-                BuildingType.Well => "??",
-                BuildingType.TownHall => "???",
-                _ => "?"
-            };
-        }
+                        private string GetBuildingAsciiIcon(BuildingType type)
+                {
+                    return type switch
+                    {
+                        BuildingType.House => "[]",
+                        BuildingType.Farm => "==",
+                        BuildingType.Warehouse => "##",
+                        BuildingType.Mine => "^^",
+                        BuildingType.Lumberyard => "||",
+                        BuildingType.Workshop => "++",
+                        BuildingType.Market => "$$",
+                        BuildingType.Well => "oo",
+                        BuildingType.TownHall => "@@",
+                        _ => "?"
+                    };
+                }
 
         private string GetLogPrefix(LogLevel level)
         {
             return level switch
             {
-                LogLevel.Info => "??",
-                LogLevel.Warning => "??",
-                LogLevel.Error => "?",
-                LogLevel.Success => "?",
-                _ => "·"
+                LogLevel.Info => "*",
+                LogLevel.Warning => "!",
+                LogLevel.Error => "X",
+                LogLevel.Success => "+",
+                _ => "ï¿½"
+            };
+        }
+
+        private UIIconType GetLogIconType(LogLevel level)
+        {
+            return level switch
+            {
+                LogLevel.Info => UIIconType.Info,
+                LogLevel.Warning => UIIconType.Warning,
+                LogLevel.Error => UIIconType.Error,
+                LogLevel.Success => UIIconType.Success,
+                _ => UIIconType.Info
             };
         }
 
@@ -331,7 +421,7 @@ namespace VillageBuilder.Game.Graphics.UI
             // Show visual list of people on tile if multiple people present
             if (selectionManager != null && selectionManager.HasMultiplePeople())
             {
-                var headerText = $"¦ People on this tile ({selectionManager.PeopleAtSelectedTile!.Count}):";
+                var headerText = $"  People on this tile ({selectionManager.PeopleAtSelectedTile!.Count}):";
                 GraphicsConfig.DrawConsoleTextAuto(headerText, _sidebarX + Padding, y, SmallFontSize, new Color(150, 150, 255, 255));
                 y += LineHeight;
 
@@ -341,55 +431,71 @@ namespace VillageBuilder.Game.Graphics.UI
                     var p = selectionManager.PeopleAtSelectedTile[i];
                     bool isSelected = i == selectionManager.SelectedPersonIndex;
 
-                    // Selection indicator (arrow or bullet)
-                    string indicator = isSelected ? "¦ ? " : "¦   ";
                     var nameColor = isSelected ? new Color(255, 255, 100, 255) : new Color(180, 180, 180, 255);
+
+                    // Selection indicator (sprite arrow with ASCII fallback)
+                    int personX = _sidebarX + Padding;
+                    if (isSelected)
+                    {
+                        personX += GraphicsConfig.DrawUIIcon(
+                            UIIconType.ArrowRight,
+                            personX, y,
+                            SmallFontSize - 2,
+                            nameColor,
+                            ">"
+                        );
+                        personX += 2;
+                    }
+                    else
+                    {
+                        personX += SmallFontSize; // Add spacing to align with selected
+                    }
 
                     // Show name with task indicator
                     string taskIcon = GetTaskIcon(p.CurrentTask);
-                    string displayText = $"{indicator}{taskIcon} {p.FirstName} {p.LastName}";
+                    string displayText = $"{taskIcon} {p.FirstName} {p.LastName}";
 
-                    GraphicsConfig.DrawConsoleTextAuto(displayText, _sidebarX + Padding, y, SmallFontSize - 2, nameColor);
+                    GraphicsConfig.DrawConsoleTextAuto(displayText, personX, y, SmallFontSize - 2, nameColor);
                     y += LineHeight - 2;
                 }
 
                 y += 5;
-                GraphicsConfig.DrawConsoleTextAuto("¦ [Click name] or [Arrows/Tab] to switch", _sidebarX + Padding, y, SmallFontSize - 2, new Color(120, 120, 150, 255));
+                GraphicsConfig.DrawConsoleTextAuto("  [Click name] or [Arrows/Tab] to switch", _sidebarX + Padding, y, SmallFontSize - 2, new Color(120, 120, 150, 255));
                 y += LineHeight + 5;
             }
 
             // Person details
-            GraphicsConfig.DrawConsoleTextAuto($"¦ {person.FullName}", _sidebarX + Padding, y, SmallFontSize, new Color(255, 255, 100, 255));
+            GraphicsConfig.DrawConsoleTextAuto($"  {person.FullName}", _sidebarX + Padding, y, SmallFontSize, new Color(255, 255, 100, 255));
             y += LineHeight;
-            GraphicsConfig.DrawConsoleTextAuto($"¦ Age: {person.Age} | {person.Gender}", _sidebarX + Padding, y, SmallFontSize, textColor);
+            GraphicsConfig.DrawConsoleTextAuto($"  Age: {person.Age} | {person.Gender}", _sidebarX + Padding, y, SmallFontSize, textColor);
             y += LineHeight;
             
             if (person.Family != null)
             {
-                GraphicsConfig.DrawConsoleTextAuto($"¦ Family: {person.Family.FamilyName}", _sidebarX + Padding, y, SmallFontSize, textColor);
+                GraphicsConfig.DrawConsoleTextAuto($"  Family: {person.Family.FamilyName}", _sidebarX + Padding, y, SmallFontSize, textColor);
                 y += LineHeight;
             }
             
             // Show current task/status
             var taskText = GetPersonTaskText(person);
             var taskColor = GetPersonTaskColor(person);
-            GraphicsConfig.DrawConsoleTextAuto($"¦ Status: {taskText}", _sidebarX + Padding, y, SmallFontSize, taskColor);
+            GraphicsConfig.DrawConsoleTextAuto($"  Status: {taskText}", _sidebarX + Padding, y, SmallFontSize, taskColor);
             y += LineHeight;
             
-            GraphicsConfig.DrawConsoleTextAuto($"¦ Energy: {person.Energy}/100", _sidebarX + Padding, y, SmallFontSize, textColor);
+            GraphicsConfig.DrawConsoleTextAuto($"  Energy: {person.Energy}/100", _sidebarX + Padding, y, SmallFontSize, textColor);
             y += LineHeight;
-            GraphicsConfig.DrawConsoleTextAuto($"¦ Hunger: {person.Hunger}/100", _sidebarX + Padding, y, SmallFontSize, textColor);
+            GraphicsConfig.DrawConsoleTextAuto($"  Hunger: {person.Hunger}/100", _sidebarX + Padding, y, SmallFontSize, textColor);
             y += LineHeight;
             
             if (person.AssignedBuilding != null)
             {
-                GraphicsConfig.DrawConsoleTextAuto($"¦ Workplace: {person.AssignedBuilding.Type}", _sidebarX + Padding, y, SmallFontSize, new Color(150, 255, 150, 255));
+                GraphicsConfig.DrawConsoleTextAuto($"  Workplace: {person.AssignedBuilding.Type}", _sidebarX + Padding, y, SmallFontSize, new Color(150, 255, 150, 255));
                 y += LineHeight;
             }
             
             if (person.HomeBuilding != null)
             {
-                GraphicsConfig.DrawConsoleTextAuto($"¦ Home: House at ({person.HomeBuilding.X}, {person.HomeBuilding.Y})", _sidebarX + Padding, y, SmallFontSize, new Color(255, 200, 150, 255));
+                GraphicsConfig.DrawConsoleTextAuto($"  Home: House at ({person.HomeBuilding.X}, {person.HomeBuilding.Y})", _sidebarX + Padding, y, SmallFontSize, new Color(255, 200, 150, 255));
                 y += LineHeight;
             }
             
@@ -399,36 +505,42 @@ namespace VillageBuilder.Game.Graphics.UI
             DrawSectionHeader("COMMANDS", y);
             y += LineHeight + 5;
             
-            GraphicsConfig.DrawConsoleTextAuto("¦ [ESC  ] Back to Map", _sidebarX + Padding, y, SmallFontSize, new Color(150, 200, 255, 255));
+            GraphicsConfig.DrawConsoleTextAuto("  [ESC  ] Back to Map", _sidebarX + Padding, y, SmallFontSize, new Color(150, 200, 255, 255));
             y += LineHeight;
             
             if (selectionManager != null && selectionManager.HasMultiplePeople())
             {
-                GraphicsConfig.DrawConsoleTextAuto("¦ [Arrows] Cycle People", _sidebarX + Padding, y, SmallFontSize, new Color(150, 200, 255, 255));
+                GraphicsConfig.DrawConsoleTextAuto("  [Arrows] Cycle People", _sidebarX + Padding, y, SmallFontSize, new Color(150, 200, 255, 255));
                 y += LineHeight;
             }
             
-            GraphicsConfig.DrawConsoleTextAuto("¦", _sidebarX + Padding, y, SmallFontSize, textColor);
+            GraphicsConfig.DrawConsoleTextAuto("  ", _sidebarX + Padding, y, SmallFontSize, textColor);
             y += LineHeight;
             
             // Show different message based on person's current job status
             if (person.AssignedBuilding != null)
             {
-                GraphicsConfig.DrawConsoleTextAuto("¦ Click building to change job", _sidebarX + Padding, y, SmallFontSize, new Color(120, 120, 120, 255));
+                GraphicsConfig.DrawConsoleTextAuto("  Click building to change job", _sidebarX + Padding, y, SmallFontSize, new Color(120, 120, 120, 255));
             }
             else
             {
-                GraphicsConfig.DrawConsoleTextAuto("¦ Click building to assign job", _sidebarX + Padding, y, SmallFontSize, new Color(120, 120, 120, 255));
-            }
-            y += LineHeight;
+                GraphicsConfig.DrawConsoleTextAuto("  Click building to assign job", _sidebarX + Padding, y, SmallFontSize, new Color(120, 120, 120, 255));
+                    }
+                    y += LineHeight;
 
-            // Draw section separator
-            GraphicsConfig.DrawConsoleTextAuto(new string('?', (_sidebarWidth - Padding * 2 - 8) / 8), 
-                _sidebarX + Padding, y, FontSize, new Color(100, 100, 120, 255));
-            y += LineHeight;
+                    // Draw section separator
+                    GraphicsConfig.DrawUIDecorationLine(
+                        UIIconType.SeparatorLine,
+                        _sidebarX + Padding, y,
+                        _sidebarWidth - Padding * 2,
+                        FontSize,
+                        new Color(100, 100, 120, 255),
+                        '?'
+                    );
+                    y += LineHeight;
 
-            return y + 5;
-        }
+                    return y + 5;
+                }
         
         private string GetPersonTaskText(VillageBuilder.Engine.Entities.Person person)
         {
@@ -464,19 +576,35 @@ namespace VillageBuilder.Game.Graphics.UI
         {
             return task switch
             {
-                VillageBuilder.Engine.Entities.PersonTask.Sleeping => "??",
-                VillageBuilder.Engine.Entities.PersonTask.GoingHome => "??",
-                VillageBuilder.Engine.Entities.PersonTask.GoingToWork => "??",
-                VillageBuilder.Engine.Entities.PersonTask.WorkingAtBuilding => "??",
-                VillageBuilder.Engine.Entities.PersonTask.Constructing => "???",
-                VillageBuilder.Engine.Entities.PersonTask.Resting => "??",
-                VillageBuilder.Engine.Entities.PersonTask.MovingToLocation => "??",
-                VillageBuilder.Engine.Entities.PersonTask.Idle => "??",
+                VillageBuilder.Engine.Entities.PersonTask.Sleeping => "zz",
+                VillageBuilder.Engine.Entities.PersonTask.GoingHome => ">>",
+                VillageBuilder.Engine.Entities.PersonTask.GoingToWork => "->",
+                VillageBuilder.Engine.Entities.PersonTask.WorkingAtBuilding => "**",
+                VillageBuilder.Engine.Entities.PersonTask.Constructing => "++",
+                VillageBuilder.Engine.Entities.PersonTask.Resting => "~~",
+                VillageBuilder.Engine.Entities.PersonTask.MovingToLocation => ">>",
+                VillageBuilder.Engine.Entities.PersonTask.Idle => "..",
                 _ => "?"
             };
         }
         
-        private int RenderBuildingInfo(GameEngine engine, Building building, int startY)
+
+        
+        private UIIconType? GetTaskIconType(VillageBuilder.Engine.Entities.PersonTask task)
+        {
+            return task switch
+            {
+                VillageBuilder.Engine.Entities.PersonTask.Sleeping => UIIconType.Sleeping,
+                VillageBuilder.Engine.Entities.PersonTask.GoingHome => UIIconType.Walking,
+                VillageBuilder.Engine.Entities.PersonTask.GoingToWork => UIIconType.Walking,
+                VillageBuilder.Engine.Entities.PersonTask.WorkingAtBuilding => UIIconType.Construction,
+                VillageBuilder.Engine.Entities.PersonTask.Constructing => UIIconType.Construction,
+                VillageBuilder.Engine.Entities.PersonTask.Resting => UIIconType.Resting,
+                VillageBuilder.Engine.Entities.PersonTask.MovingToLocation => UIIconType.Walking,
+                VillageBuilder.Engine.Entities.PersonTask.Idle => UIIconType.Idle,
+                _ => null
+            };
+        }        private int RenderBuildingInfo(GameEngine engine, Building building, int startY)
         {
             var y = startY;
             var textColor = new Color(200, 200, 200, 255);
@@ -487,9 +615,9 @@ namespace VillageBuilder.Game.Graphics.UI
             y += LineHeight + 5;
 
             // Building details
-            GraphicsConfig.DrawConsoleTextAuto($"¦ {building.Name}", _sidebarX + Padding, y, SmallFontSize, new Color(255, 200, 100, 255));
+            GraphicsConfig.DrawConsoleTextAuto($"  {building.Name}", _sidebarX + Padding, y, SmallFontSize, new Color(255, 200, 100, 255));
             y += LineHeight;
-            GraphicsConfig.DrawConsoleTextAuto($"¦ Type: {building.Type}", _sidebarX + Padding, y, SmallFontSize, textColor);
+            GraphicsConfig.DrawConsoleTextAuto($"  Type: {building.Type}", _sidebarX + Padding, y, SmallFontSize, textColor);
             y += LineHeight;
 
             // Construction status
@@ -499,14 +627,14 @@ namespace VillageBuilder.Game.Graphics.UI
                 var progressPercent = building.GetConstructionProgressPercent();
                 var stageColor = new Color(255, 200, 100, 255);
 
-                GraphicsConfig.DrawConsoleTextAuto($"¦ Status: Under Construction", _sidebarX + Padding, y, SmallFontSize, new Color(255, 150, 50, 255));
+                GraphicsConfig.DrawConsoleTextAuto($"  Status: Under Construction", _sidebarX + Padding, y, SmallFontSize, new Color(255, 150, 50, 255));
                 y += LineHeight;
 
-                GraphicsConfig.DrawConsoleTextAuto($"¦ Stage: {stage}", _sidebarX + Padding, y, SmallFontSize, stageColor);
+                GraphicsConfig.DrawConsoleTextAuto($"  Stage: {stage}", _sidebarX + Padding, y, SmallFontSize, stageColor);
                 y += LineHeight;
 
                 // Progress bar
-                GraphicsConfig.DrawConsoleTextAuto($"¦ Progress: {progressPercent}%", _sidebarX + Padding, y, SmallFontSize, textColor);
+                GraphicsConfig.DrawConsoleTextAuto($"  Progress: {progressPercent}%", _sidebarX + Padding, y, SmallFontSize, textColor);
                 y += LineHeight;
 
                 // Draw visual progress bar
@@ -535,7 +663,7 @@ namespace VillageBuilder.Game.Graphics.UI
                 y += barHeight + 5;
 
                 // Construction workers
-                GraphicsConfig.DrawConsoleTextAuto($"¦ Builders: {building.ConstructionWorkers.Count}", _sidebarX + Padding, y, SmallFontSize, new Color(150, 255, 150, 255));
+                GraphicsConfig.DrawConsoleTextAuto($"  Builders: {building.ConstructionWorkers.Count}", _sidebarX + Padding, y, SmallFontSize, new Color(150, 255, 150, 255));
                 y += LineHeight;
 
                 if (building.ConstructionWorkers.Count > 0)
@@ -544,21 +672,21 @@ namespace VillageBuilder.Game.Graphics.UI
                     foreach (var familyGroup in workersByFamily)
                     {
                         var family = familyGroup.Key!;
-                        GraphicsConfig.DrawConsoleTextAuto($"¦   • {family.FamilyName} ({familyGroup.Count()})", 
+                        GraphicsConfig.DrawConsoleTextAuto($"    ï¿½ {family.FamilyName} ({familyGroup.Count()})", 
                             _sidebarX + Padding + 10, y, SmallFontSize - 2, textColor);
                         y += LineHeight;
                     }
                 }
                 else
                 {
-                    GraphicsConfig.DrawConsoleTextAuto($"¦   (No builders assigned)", 
+                    GraphicsConfig.DrawConsoleTextAuto($"    (No builders assigned)", 
                         _sidebarX + Padding + 10, y, SmallFontSize - 2, new Color(255, 150, 50, 255));
                     y += LineHeight;
                 }
             }
             else
             {
-                GraphicsConfig.DrawConsoleTextAuto($"¦ Status: Operational", 
+                GraphicsConfig.DrawConsoleTextAuto($"  Status: Operational", 
                     _sidebarX + Padding, y, SmallFontSize, new Color(100, 255, 100, 255));
                 y += LineHeight;
             }
@@ -569,7 +697,7 @@ namespace VillageBuilder.Game.Graphics.UI
             if (building.Type == BuildingType.House)
             {
                 // Show residents for houses
-                GraphicsConfig.DrawConsoleTextAuto($"¦ Residents: {building.Residents.Count}", _sidebarX + Padding, y, SmallFontSize, new Color(150, 255, 150, 255));
+                GraphicsConfig.DrawConsoleTextAuto($"  Residents: {building.Residents.Count}", _sidebarX + Padding, y, SmallFontSize, new Color(150, 255, 150, 255));
                 y += LineHeight;
                 
                 if (building.Residents.Count > 0)
@@ -578,7 +706,7 @@ namespace VillageBuilder.Game.Graphics.UI
                     foreach (var familyGroup in residentsByFamily)
                     {
                         var family = familyGroup.Key!;
-                        GraphicsConfig.DrawConsoleTextAuto($"¦   • {family.FamilyName} ({familyGroup.Count()})", 
+                        GraphicsConfig.DrawConsoleTextAuto($"    ï¿½ {family.FamilyName} ({familyGroup.Count()})", 
                             _sidebarX + Padding + 10, y, SmallFontSize - 2, textColor);
                         y += LineHeight;
                     }
@@ -587,7 +715,7 @@ namespace VillageBuilder.Game.Graphics.UI
             else
             {
                 // Show workers for other buildings
-                GraphicsConfig.DrawConsoleTextAuto($"¦ Workers: {building.Workers.Count}", _sidebarX + Padding, y, SmallFontSize, new Color(150, 255, 150, 255));
+                GraphicsConfig.DrawConsoleTextAuto($"  Workers: {building.Workers.Count}", _sidebarX + Padding, y, SmallFontSize, new Color(150, 255, 150, 255));
                 y += LineHeight;
                 
                 if (building.Workers.Count > 0)
@@ -596,7 +724,7 @@ namespace VillageBuilder.Game.Graphics.UI
                     foreach (var familyGroup in workersByFamily)
                     {
                         var family = familyGroup.Key!;
-                        GraphicsConfig.DrawConsoleTextAuto($"¦   • {family.FamilyName} ({familyGroup.Count()})", 
+                        GraphicsConfig.DrawConsoleTextAuto($"    ï¿½ {family.FamilyName} ({familyGroup.Count()})", 
                             _sidebarX + Padding + 10, y, SmallFontSize - 2, textColor);
                         y += LineHeight;
                     }
@@ -613,13 +741,13 @@ namespace VillageBuilder.Game.Graphics.UI
             // Show legend for work buildings
             if (!isHouse)
             {
-                GraphicsConfig.DrawConsoleTextAuto("¦ Legend:", _sidebarX + Padding, y, SmallFontSize - 2, new Color(150, 150, 150, 255));
+                GraphicsConfig.DrawConsoleTextAuto("  Legend:", _sidebarX + Padding, y, SmallFontSize - 2, new Color(150, 150, 150, 255));
                 y += LineHeight - 2;
-                GraphicsConfig.DrawConsoleTextAuto("¦ Green = Working here", _sidebarX + Padding + 10, y, SmallFontSize - 3, new Color(150, 255, 150, 255));
+                GraphicsConfig.DrawConsoleTextAuto("  Green = Working here", _sidebarX + Padding + 10, y, SmallFontSize - 3, new Color(150, 255, 150, 255));
                 y += LineHeight - 3;
-                GraphicsConfig.DrawConsoleTextAuto("¦ Yellow = Working elsewhere", _sidebarX + Padding + 10, y, SmallFontSize - 3, new Color(200, 200, 100, 255));
+                GraphicsConfig.DrawConsoleTextAuto("  Yellow = Working elsewhere", _sidebarX + Padding + 10, y, SmallFontSize - 3, new Color(200, 200, 100, 255));
                 y += LineHeight - 3;
-                GraphicsConfig.DrawConsoleTextAuto("¦ White = Available", _sidebarX + Padding + 10, y, SmallFontSize - 3, new Color(200, 200, 200, 255));
+                GraphicsConfig.DrawConsoleTextAuto("  White = Available", _sidebarX + Padding + 10, y, SmallFontSize - 3, new Color(200, 200, 200, 255));
                 y += LineHeight;
             }
             
@@ -680,8 +808,8 @@ namespace VillageBuilder.Game.Graphics.UI
                     // House assignment logic
                     var familyHomesHere = family.Members.Any(m => m.HomeBuilding?.Id == building.Id);
                     buttonText = familyHomesHere ? 
-                        $"¦ {family.FamilyName} (Living here)" : 
-                        $"¦ {family.FamilyName} ({adultCount} adults)";
+                        $"  {family.FamilyName} (Living here)" : 
+                        $"  {family.FamilyName} ({adultCount} adults)";
                     textColorToUse = familyHomesHere ? new Color(150, 255, 150, 255) : textColor;
                 }
                 else
@@ -689,22 +817,22 @@ namespace VillageBuilder.Game.Graphics.UI
                     // Work building assignment logic
                     if (isAssignedHere)
                     {
-                        buttonText = $"¦ {family.FamilyName} ({familyWorkersHere} working here)";
+                        buttonText = $"  {family.FamilyName} ({familyWorkersHere} working here)";
                         textColorToUse = new Color(150, 255, 150, 255);
                     }
                     else if (workingElsewhere.Any() && otherWorkplace != null)
                     {
-                        buttonText = $"¦ {family.FamilyName} (at {otherWorkplace.Type})";
+                        buttonText = $"  {family.FamilyName} (at {otherWorkplace.Type})";
                         textColorToUse = new Color(200, 200, 100, 255); // Yellow text
                     }
                     else if (availableCount > 0)
                     {
-                        buttonText = $"¦ {family.FamilyName} ({availableCount} available)";
+                        buttonText = $"  {family.FamilyName} ({availableCount} available)";
                         textColorToUse = new Color(200, 200, 200, 255);
                     }
                     else
                     {
-                        buttonText = $"¦ {family.FamilyName} (no workers available)";
+                        buttonText = $"  {family.FamilyName} (no workers available)";
                         textColorToUse = new Color(120, 120, 120, 255); // Grayed out
                     }
                 }
@@ -756,13 +884,19 @@ namespace VillageBuilder.Game.Graphics.UI
                 GraphicsConfig.DrawConsoleTextAuto("  [ESC  ] Back to Map", _sidebarX + Padding, y, SmallFontSize, new Color(150, 200, 255, 255));
                 y += LineHeight;
 
-                // Draw section separator
-                GraphicsConfig.DrawConsoleTextAuto(new string('?', (_sidebarWidth - Padding * 2 - 8) / 8), 
-                    _sidebarX + Padding, y, FontSize, new Color(100, 100, 120, 255));
-                y += LineHeight;
+                                                                // Draw section separator
+                                                                GraphicsConfig.DrawUIDecorationLine(
+                                                                    UIIconType.SeparatorLine,
+                                                                    _sidebarX + Padding, y,
+                                                                    _sidebarWidth - Padding * 2,
+                                                                    FontSize,
+                                                                    new Color(100, 100, 120, 255),
+                                                                    '?'
+                                                                );
+                                                                y += LineHeight;
 
-                return y + 5;
-            }
-    }
-}
+                                                                return y + 5;
+                                                            }
+                                                    }
+                                                }
 

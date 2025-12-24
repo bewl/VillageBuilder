@@ -1,4 +1,4 @@
-using Raylib_cs;
+﻿using Raylib_cs;
 using VillageBuilder.Engine.World;
 
 namespace VillageBuilder.Game.Graphics.UI
@@ -51,10 +51,19 @@ namespace VillageBuilder.Game.Graphics.UI
             GraphicsConfig.DrawConsoleText(variantText, x + 4, currentY, _smallFontSize, textColor);
             currentY += _smallFontSize + 4;
 
-            // Walkability
-            var walkableText = tile.IsWalkable ? "? Walkable" : "? Not Walkable";
+            // Walkability (using sprite icons)
+            int walkX = x + 4;
             var walkableColor = tile.IsWalkable ? GraphicsConfig.Colors.Green : GraphicsConfig.Colors.Red;
-            GraphicsConfig.DrawConsoleText(walkableText, x + 4, currentY, _smallFontSize, walkableColor);
+            var walkIconType = tile.IsWalkable ? UIIconType.Success : UIIconType.Error;
+            walkX += GraphicsConfig.DrawUIIcon(
+                walkIconType,
+                walkX, currentY,
+                _smallFontSize,
+                walkableColor,
+                tile.IsWalkable ? "+" : "X"
+            );
+            var walkableText = tile.IsWalkable ? " Walkable" : " Not Walkable";
+            GraphicsConfig.DrawConsoleText(walkableText, walkX, currentY, _smallFontSize, walkableColor);
             currentY += _smallFontSize + 8;
 
             // Decorations section
@@ -66,8 +75,44 @@ namespace VillageBuilder.Game.Graphics.UI
                 int count = 0;
                 foreach (var decoration in tile.Decorations.Take(8)) // Show max 8 decorations
                 {
-                    var decorText = $"  {decoration.GetGlyph()} {GetDecorationName(decoration.Type)}";
-                    GraphicsConfig.DrawConsoleTextAuto(decorText, x + 4, currentY, _smallFontSize, textColor);
+                    int decorX = x + 4;
+
+                    // Get decoration color from Engine
+                    var decorColor = decoration.GetColor();
+                    var raylibColor = new Color(decorColor.R, decorColor.G, decorColor.B, decorColor.A);
+
+                    // Draw decoration glyph with sprite support
+                    var glyph = decoration.GetGlyph();
+                    if (GraphicsConfig.UseSpriteMode && SpriteAtlasManager.Instance.SpriteModeEnabled)
+                    {
+                        // Try to draw as sprite first
+                        var sprite = SpriteAtlasManager.Instance.GetSprite(decoration.Type);
+                        if (sprite.HasValue)
+                        {
+                            var sourceRect = new Rectangle(0, 0, sprite.Value.Width, sprite.Value.Height);
+                            var destRect = new Rectangle(decorX, currentY, _smallFontSize, _smallFontSize);
+                            var origin = new System.Numerics.Vector2(0, 0);
+                            Raylib.DrawTexturePro(sprite.Value, sourceRect, destRect, origin, 0f, raylibColor);
+                            decorX += _smallFontSize + 2;
+                        }
+                        else
+                        {
+                            // Fallback to ASCII with proper color
+                            GraphicsConfig.DrawConsoleText(glyph, decorX, currentY, _smallFontSize, raylibColor);
+                            decorX += GraphicsConfig.MeasureText(glyph, _smallFontSize) + 2;
+                        }
+                    }
+                    else
+                    {
+                        // ASCII mode with proper color
+                        GraphicsConfig.DrawConsoleText(glyph, decorX, currentY, _smallFontSize, raylibColor);
+                        decorX += GraphicsConfig.MeasureText(glyph, _smallFontSize) + 2;
+                    }
+
+                    // Draw decoration name
+                    var decorName = GetDecorationName(decoration.Type);
+                    GraphicsConfig.DrawConsoleText(decorName, decorX, currentY, _smallFontSize, textColor);
+
                     currentY += _smallFontSize + 2;
                     count++;
                 }
@@ -97,7 +142,7 @@ namespace VillageBuilder.Game.Graphics.UI
 
                 foreach (var person in tile.PeopleOnTile.Take(5)) // Show max 5 people
                 {
-                    var personText = $"  � {person.FirstName} {person.LastName}";
+                    var personText = $"  ☺ {person.FirstName} {person.LastName}";
                     GraphicsConfig.DrawConsoleText(personText, x + 4, currentY, _smallFontSize, highlightColor);
                     currentY += _smallFontSize + 2;
                 }
@@ -144,7 +189,7 @@ namespace VillageBuilder.Game.Graphics.UI
             var lines = new List<string>();
             
             // Terrain with emoji if using sprites
-            var terrainLine = $"?? {tile.GetTerrainName()} ({tile.X}, {tile.Y})";
+            var terrainLine = $"{tile.GetTerrainName()} ({tile.X}, {tile.Y})";
             lines.Add(terrainLine);
 
             // Top 3 decorations
@@ -165,14 +210,14 @@ namespace VillageBuilder.Game.Graphics.UI
             if (tile.PeopleOnTile.Count > 0)
             {
                 lines.Add("");
-                lines.Add($"?? {tile.PeopleOnTile.Count} {(tile.PeopleOnTile.Count == 1 ? "person" : "people")} here");
+                lines.Add($"{tile.PeopleOnTile.Count} {(tile.PeopleOnTile.Count == 1 ? "person" : "people")} here");
             }
 
             // Building
             if (tile.Building != null)
             {
                 lines.Add("");
-                lines.Add($"?? {tile.Building.Name}");
+                lines.Add($"Building: {tile.Building.Name}");
             }
 
             // Hint
@@ -290,3 +335,5 @@ namespace VillageBuilder.Game.Graphics.UI
         }
     }
 }
+
+
