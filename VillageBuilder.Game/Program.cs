@@ -2,6 +2,8 @@
 using VillageBuilder.Game.Graphics;
 using VillageBuilder.Game.UI.ViewModels;
 using VillageBuilder.Game.Core.Services;
+using VillageBuilder.Game.Core;
+using VillageBuilder.Game.Graphics.UI;
 
 var config = new GameConfiguration
 {
@@ -23,17 +25,20 @@ GraphicsConfig.InitializeWindow();
 // Load console font
 GraphicsConfig.LoadFont();
 
+// Initialize save directory
+SaveLoadService.InitializeSaveDirectory();
+
 var renderer = new GameRenderer(engine);
 
 gameLoop.Start();
 
 while (!renderer.ShouldClose())
 {
-    renderer.HandleInput(out bool togglePause, out float timeScaleChange);
-    
+    renderer.HandleInput(out bool togglePause, out float timeScaleChange, out bool saveRequested, out bool loadRequested);
+
     if (togglePause)
         viewModel.TogglePause();
-    
+
     if (timeScaleChange != 0)
     {
         if (timeScaleChange == 0.0f) // Special case: reset to 1x
@@ -41,7 +46,39 @@ while (!renderer.ShouldClose())
         else
             viewModel.MultiplyTimeScale(timeScaleChange);
     }
-    
+
+    // Handle save/load
+    if (saveRequested)
+    {
+        var result = SaveLoadService.QuickSave(engine);
+        EventLog.Instance.AddMessage(result.Message, result.Success ? LogLevel.Success : LogLevel.Error);
+    }
+
+    if (loadRequested)
+    {
+        var result = SaveLoadService.QuickLoad();
+        if (result.Success && result.Engine != null)
+        {
+            // Stop old game loop
+            gameLoop.Stop();
+
+            // Replace engine
+            engine = result.Engine;
+            viewModel = new GameViewModel(engine);
+            gameLoop = new GameLoopService(viewModel);
+            renderer = new GameRenderer(engine);
+
+            // Restart game loop
+            gameLoop.Start();
+
+            EventLog.Instance.AddMessage(result.Message, LogLevel.Success);
+        }
+        else
+        {
+            EventLog.Instance.AddMessage(result.Message, LogLevel.Error);
+        }
+    }
+
     float deltaTime = Raylib_cs.Raylib.GetFrameTime();
     renderer.Update(deltaTime);
     renderer.Render(viewModel.TimeScale, viewModel.IsPaused);

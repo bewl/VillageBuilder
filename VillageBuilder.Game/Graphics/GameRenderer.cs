@@ -81,10 +81,12 @@ namespace VillageBuilder.Game.Graphics
             return _shouldQuit || Raylib.WindowShouldClose();
         }
 
-        public void HandleInput(out bool pause, out float timeScaleChange)
+        public void HandleInput(out bool pause, out float timeScaleChange, out bool saveRequested, out bool loadRequested)
         {
             pause = false;
             timeScaleChange = 0;
+            saveRequested = false;
+            loadRequested = false;
 
             // Camera movement - only if not cycling through people
             float baseSpeed = 300.0f;
@@ -262,6 +264,17 @@ namespace VillageBuilder.Game.Graphics
             if (Raylib.IsKeyPressed(KeyboardKey.Minus) || Raylib.IsKeyPressed(KeyboardKey.KpSubtract)) timeScaleChange = 0.5f;
             if (Raylib.IsKeyPressed(KeyboardKey.Zero) || Raylib.IsKeyPressed(KeyboardKey.Kp0)) timeScaleChange = 0.0f; // Reset to 1x (special handling needed)
 
+            // Save/Load controls
+            // F5 = Quick Save, F9 = Quick Load
+            if (Raylib.IsKeyPressed(KeyboardKey.F5))
+            {
+                saveRequested = true;
+            }
+            if (Raylib.IsKeyPressed(KeyboardKey.F9))
+            {
+                loadRequested = true;
+            }
+
             // Heat map toggle with V key
             if (Raylib.IsKeyPressed(KeyboardKey.V))
             {
@@ -393,6 +406,16 @@ namespace VillageBuilder.Game.Graphics
         {
             Raylib.BeginDrawing();
             Raylib.ClearBackground(GraphicsConfig.Colors.Background);
+
+            // Update particle system
+            float deltaTime = Raylib.GetFrameTime();
+            _particleSystem.Update(deltaTime);
+
+            // Emit weather particles based on current weather
+            EmitWeatherParticles();
+
+            // Emit chimney smoke from occupied houses
+            EmitChimneySmokeParticles();
 
             // Render everything in world space first
             Raylib.BeginMode2D(_camera);
@@ -710,14 +733,63 @@ namespace VillageBuilder.Game.Graphics
             }
         }
 
-        public void Shutdown()
-        {
-            Raylib.CloseWindow();
-        }
+                public void Shutdown()
+                {
+                    Raylib.CloseWindow();
+                }
 
-        public void AddParticleEffect(Vector2 position, ParticleType type)
-        {
-            _particleSystem.Emit(position, type);
+                public void AddParticleEffect(Vector2 position, ParticleType type)
+                {
+                    _particleSystem.Emit(position, type);
+                }
+
+                private void EmitWeatherParticles()
+                {
+                    var weather = _engine.Weather;
+
+                    // Emit weather particles based on current weather condition
+                    switch (weather.Condition)
+                    {
+                        case WeatherCondition.Rain:
+                        case WeatherCondition.Storm:
+                            _particleSystem.EmitWeatherParticles(
+                                ParticleType.Rain, 
+                                GraphicsConfig.ScreenWidth, 
+                                GraphicsConfig.ScreenHeight, 
+                                _camera);
+                            break;
+
+                        case WeatherCondition.Snow:
+                        case WeatherCondition.Blizzard:
+                            _particleSystem.EmitWeatherParticles(
+                                ParticleType.Snow, 
+                                GraphicsConfig.ScreenWidth, 
+                                GraphicsConfig.ScreenHeight, 
+                                _camera);
+                            break;
+                    }
+                }
+
+                private void EmitChimneySmokeParticles()
+                {
+                    // Only emit smoke during evening/night and from occupied houses
+                    if (!_engine.Time.IsNightTime() && !_engine.Time.IsEveningTime()) return;
+
+                    // Emit smoke from houses with residents (randomly to avoid performance issues)
+                    foreach (var building in _engine.Buildings)
+                    {
+                        if (building.Type != BuildingType.House || !building.IsConstructed) continue;
+                        if (building.Residents.Count == 0) continue;
+
+                        // Randomly emit smoke (about 10% chance per frame for each house)
+                        if (Random.Shared.Next(100) < 10)
+                        {
+                            // Emit from top-center of building
+                            var smokeX = (building.X + building.Definition.Width / 2f) * GraphicsConfig.TileSize;
+                            var smokeY = building.Y * GraphicsConfig.TileSize - 5; // Slightly above roof
+                            _particleSystem.Emit(new Vector2(smokeX, smokeY), ParticleType.ChimneySmoke, 1);
+                        }
+                    }
+                }
+            }
         }
-    }
-}

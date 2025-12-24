@@ -121,6 +121,19 @@ namespace VillageBuilder.Engine.Core
         }
 
         /// <summary>
+        /// Check if it's nighttime (alias for IsNight)
+        /// </summary>
+        public bool IsNightTime() => IsNight();
+
+        /// <summary>
+        /// Check if it's evening time (6 PM - 10 PM)
+        /// </summary>
+        public bool IsEveningTime()
+        {
+            return Hour >= 18 && Hour < 22;
+        }
+
+        /// <summary>
         /// Get current time of day
         /// </summary>
         public TimeOfDay GetTimeOfDay()

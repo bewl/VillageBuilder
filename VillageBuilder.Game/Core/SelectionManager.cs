@@ -62,6 +62,18 @@ namespace VillageBuilder.Game.Core
             }
         }
 
+        /// <summary>
+        /// Select a specific person by index from the current tile's people list
+        /// </summary>
+        public void SelectPersonByIndex(int index)
+        {
+            if (PeopleAtSelectedTile != null && index >= 0 && index < PeopleAtSelectedTile.Count)
+            {
+                SelectedPersonIndex = index;
+                SelectedPerson = PeopleAtSelectedTile[index];
+            }
+        }
+
         public void SelectBuilding(Building building)
         {
             CurrentSelectionType = SelectionType.Building;

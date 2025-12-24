@@ -1,13 +1,84 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36811.4 d17.14
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11312.210 d18.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VillageBuilder.Engine", "VillageBuilder.Engine\VillageBuilder.Engine.csproj", "{E7BD86B9-A764-374B-9100-1A5AC329CD74}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VillageBuilder.Game", "VillageBuilder.Game\VillageBuilder.Game.csproj", "{D52DE074-A148-62B1-9C17-6C76E031A3C1}"
 EndProject
-Global
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BenchmarkSuite1", "BenchmarkSuite1\BenchmarkSuite1.csproj", "{A20861A9-411E-6150-BF5C-69E8196E5D22}"
+EndProject
+
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{4570E9B5-6BF9-49CC-B3E4-AD9A1270BE53}"
+	ProjectSection(SolutionItems) = preProject
+		Documentation\README.md = Documentation\README.md
+		Documentation\DOCUMENTATION_CHECKLIST.md = Documentation\DOCUMENTATION_CHECKLIST.md
+		Documentation\REORGANIZATION_SUMMARY.md = Documentation\REORGANIZATION_SUMMARY.md
+		Documentation\reorganize_docs.ps1 = Documentation\reorganize_docs.ps1
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Performance", "Performance", "{142B6527-7640-4096-AE2E-399127094EE0}"
+	ProjectSection(SolutionItems) = preProject
+		Documentation\Performance\BENCHMARK_GUIDE.md = Documentation\Performance\BENCHMARK_GUIDE.md
+		Documentation\Performance\OPTIMIZATION_CHANGELOG.md = Documentation\Performance\OPTIMIZATION_CHANGELOG.md
+		Documentation\Performance\PERFORMANCE_OPTIMIZATIONS.md = Documentation\Performance\PERFORMANCE_OPTIMIZATIONS.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Rendering", "Rendering", "{6EFA3E18-9989-432A-BC3F-98B8BB6C2CAA}"
+	ProjectSection(SolutionItems) = preProject
+		Documentation\Rendering\UI_INTEGRATION_GUIDELINES.md = Documentation\Rendering\UI_INTEGRATION_GUIDELINES.md
+		Documentation\Rendering\VISUAL_ENHANCEMENTS.md = Documentation\Rendering\VISUAL_ENHANCEMENTS.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "EntitiesAndBuildings", "EntitiesAndBuildings", "{E9AB110A-F478-46F9-8B0A-D82DD012B720}"
+	ProjectSection(SolutionItems) = preProject
+		Documentation\EntitiesAndBuildings\BUILDING_SYSTEM.md = Documentation\EntitiesAndBuildings\BUILDING_SYSTEM.md
+		Documentation\EntitiesAndBuildings\CONSTRUCTION_SYSTEM.md = Documentation\EntitiesAndBuildings\CONSTRUCTION_SYSTEM.md
+		Documentation\EntitiesAndBuildings\PEOPLE_AND_FAMILIES.md = Documentation\EntitiesAndBuildings\PEOPLE_AND_FAMILIES.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SaveLoad", "SaveLoad", "{E2E323FD-763B-4FF8-85B9-29EDAB8FB385}"
+	ProjectSection(SolutionItems) = preProject
+		Documentation\SaveLoad\SAVE_LOAD_SYSTEM.md = Documentation\SaveLoad\SAVE_LOAD_SYSTEM.md
+		Documentation\SaveLoad\EVENT_LOG_LOAD_BEHAVIOR.md = Documentation\SaveLoad\EVENT_LOG_LOAD_BEHAVIOR.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WorldAndSimulation", "WorldAndSimulation", "{11D8AD18-6960-4487-980E-778CC85068D4}"
+	ProjectSection(SolutionItems) = preProject
+		Documentation\WorldAndSimulation\PATHFINDING.md = Documentation\WorldAndSimulation\PATHFINDING.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CoreSystems", "CoreSystems", "{770700D7-5760-46D9-A1EC-A63CB1F5BEAA}"
+	ProjectSection(SolutionItems) = preProject
+		Documentation\CoreSystems\COMMAND_SYSTEM.md = Documentation\CoreSystems\COMMAND_SYSTEM.md
+		Documentation\CoreSystems\GAME_CONFIGURATION.md = Documentation\CoreSystems\GAME_CONFIGURATION.md
+		Documentation\CoreSystems\GAME_ENGINE.md = Documentation\CoreSystems\GAME_ENGINE.md
+		Documentation\CoreSystems\TIME_AND_SEASONS.md = Documentation\CoreSystems\TIME_AND_SEASONS.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GettingStarted", "GettingStarted", "{6E0EA878-AF5F-41CE-B49E-670570E4EB2C}"
+	ProjectSection(SolutionItems) = preProject
+		Documentation\GettingStarted\QUICKSTART.md = Documentation\GettingStarted\QUICKSTART.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BugFixes", "BugFixes", "{D0E0BA26-265D-4505-A1FB-E8A2788F2B60}"
+	ProjectSection(SolutionItems) = preProject
+		Documentation\BugFixes\CONSTRUCTION_WORKER_RETURN_FIX.md = Documentation\BugFixes\CONSTRUCTION_WORKER_RETURN_FIX.md
+		Documentation\BugFixes\CONSTRUCTION_DAILY_ROUTINE_FIX.md = Documentation\BugFixes\CONSTRUCTION_DAILY_ROUTINE_FIX.md
+		Documentation\BugFixes\MULTI_PERSON_SELECTION_THREAD_SAFETY_FIX.md = Documentation\BugFixes\MULTI_PERSON_SELECTION_THREAD_SAFETY_FIX.md
+		Documentation\BugFixes\BUGFIX_CONSTRUCTION_HUNGER.md = Documentation\BugFixes\BUGFIX_CONSTRUCTION_HUNGER.md
+		Documentation\BugFixes\FONT_CONFIGURATION.md = Documentation\BugFixes\FONT_CONFIGURATION.md
+		Documentation\BugFixes\PATHFINDING_SELECTION_IMPROVEMENTS.md = Documentation\BugFixes\PATHFINDING_SELECTION_IMPROVEMENTS.md
+		Documentation\BugFixes\MULTI_PERSON_SELECTION_FLICKER_FIX.md = Documentation\BugFixes\MULTI_PERSON_SELECTION_FLICKER_FIX.md
+		Documentation\BugFixes\README.md = Documentation\BugFixes\README.md
+		Documentation\BugFixes\AUTO_CONSTRUCTION_ASSIGNMENT.md = Documentation\BugFixes\AUTO_CONSTRUCTION_ASSIGNMENT.md
+		Documentation\BugFixes\FONT_QUICK_SETUP.md = Documentation\BugFixes\FONT_QUICK_SETUP.md
+		Documentation\BugFixes\CONSTRUCTION_PRESENCE_REQUIREMENT.md = Documentation\BugFixes\CONSTRUCTION_PRESENCE_REQUIREMENT.md
+		Documentation\BugFixes\BORDERLESS_FULLSCREEN_FIX.md = Documentation\BugFixes\BORDERLESS_FULLSCREEN_FIX.md
+		Documentation\BugFixes\VIEWPORT_RESOLUTION_FIX.md = Documentation\BugFixes\VIEWPORT_RESOLUTION_FIX.md
+	EndProjectSection
+EndProjectGlobal
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
@@ -21,6 +92,10 @@ Global
 		{D52DE074-A148-62B1-9C17-6C76E031A3C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D52DE074-A148-62B1-9C17-6C76E031A3C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D52DE074-A148-62B1-9C17-6C76E031A3C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A20861A9-411E-6150-BF5C-69E8196E5D22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A20861A9-411E-6150-BF5C-69E8196E5D22}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A20861A9-411E-6150-BF5C-69E8196E5D22}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A20861A9-411E-6150-BF5C-69E8196E5D22}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -28,4 +103,15 @@ Global
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {241F3B2D-770D-432B-B96B-CC92CF0F721E}
 	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{142B6527-7640-4096-AE2E-399127094EE0} = {4570E9B5-6BF9-49CC-B3E4-AD9A1270BE53}
+		{6EFA3E18-9989-432A-BC3F-98B8BB6C2CAA} = {4570E9B5-6BF9-49CC-B3E4-AD9A1270BE53}
+		{E9AB110A-F478-46F9-8B0A-D82DD012B720} = {4570E9B5-6BF9-49CC-B3E4-AD9A1270BE53}
+		{E2E323FD-763B-4FF8-85B9-29EDAB8FB385} = {4570E9B5-6BF9-49CC-B3E4-AD9A1270BE53}
+		{11D8AD18-6960-4487-980E-778CC85068D4} = {4570E9B5-6BF9-49CC-B3E4-AD9A1270BE53}
+		{770700D7-5760-46D9-A1EC-A63CB1F5BEAA} = {4570E9B5-6BF9-49CC-B3E4-AD9A1270BE53}
+		{6E0EA878-AF5F-41CE-B49E-670570E4EB2C} = {4570E9B5-6BF9-49CC-B3E4-AD9A1270BE53}
+		{D0E0BA26-265D-4505-A1FB-E8A2788F2B60} = {4570E9B5-6BF9-49CC-B3E4-AD9A1270BE53}
+	EndGlobalSection
 EndGlobal
+

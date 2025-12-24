@@ -29,7 +29,7 @@ namespace VillageBuilder.Game.UI.ViewModels
 
         public void SetTimeScale(float scale)
         {
-            TimeScale = Math.Clamp(scale, 0.125f, 16.0f); // Increased max from 8x to 16x
+            TimeScale = Math.Clamp(scale, 0.125f, 32.0f); // Increased max from 16x to 32x
             OnStateChanged();
             OnLogMessage($"Time scale set to {TimeScale:F2}x");
         }

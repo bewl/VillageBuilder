@@ -170,12 +170,12 @@ namespace VillageBuilder.Engine.Entities
             }
 
             var target = CurrentPath[PathIndex];
-            
+
             // Check if we're already at the target position
             if (Position.X == target.X && Position.Y == target.Y)
             {
                 PathIndex++;
-                
+
                 if (PathIndex < CurrentPath.Count)
                 {
                     TargetPosition = CurrentPath[PathIndex];
@@ -188,39 +188,16 @@ namespace VillageBuilder.Engine.Entities
                     return false; // Path complete
                 }
             }
-            
-            // Check if target tile is occupied by other people
-            var targetTile = grid.GetTile(target.X, target.Y);
-            if (targetTile != null)
-            {
-                // Check if tile is occupied by someone else
-                bool tileOccupied = targetTile.PeopleOnTile.Count > 0 && 
-                                   !targetTile.PeopleOnTile.Contains(this);
 
-                // Check if we're at the final destination
-                bool isDestination = PathIndex == CurrentPath.Count - 1;
+            // REMOVED: Collision detection - people can now pass through each other
+            // This prevents families from getting stuck when moving in opposite directions
+            // People on the same tile can still be selected and cycled through in the UI
 
-                if (tileOccupied)
-                {
-                    // If tile is occupied and NOT our destination, wait
-                    if (!isDestination)
-                    {
-                        // Wait this tick - don't move onto occupied tile
-                        return true; // Still moving (waiting)
-                    }
-
-                    // If it IS our destination but tile is occupied by 1+ people
-                    // Only move there if we absolutely must (no choice)
-                    // This allows stacking at destinations when building is full
-                    // but prevents unnecessary stacking during movement
-                }
-            }
-            
             // Move to target
             var oldPosition = Position;
             Position = target;
 
-            // Update tile registrations immediately for collision avoidance
+            // Update tile registrations immediately for proper tile tracking
             if (oldPosition.X != target.X || oldPosition.Y != target.Y)
             {
                 var oldTile = grid.GetTile(oldPosition.X, oldPosition.Y);
@@ -238,7 +215,7 @@ namespace VillageBuilder.Engine.Entities
             }
 
             PathIndex++;
-            
+
             if (PathIndex < CurrentPath.Count)
             {
                 TargetPosition = CurrentPath[PathIndex];
@@ -249,7 +226,7 @@ namespace VillageBuilder.Engine.Entities
                 Console.WriteLine($"[MOVE] {FirstName} reached destination at ({Position.X},{Position.Y})");
                 return false; // Path complete
             }
-            
+
             return true; // Still moving
         }
 
@@ -313,7 +290,7 @@ namespace VillageBuilder.Engine.Entities
             }
             else
             {
-                Hunger = Math.Min(100, Hunger + 2); // Faster when awake/active
+                Hunger = Math.Min(100, Hunger + 1); // Steady hunger rate (was +2, too fast)
             }
 
             // Health effects from hunger

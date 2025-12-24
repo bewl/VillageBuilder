@@ -9,9 +9,9 @@ namespace VillageBuilder.Game.Graphics
 {
     public static class GraphicsConfig
     {
-        // Window settings
-        public const int ScreenWidth = 1920;
-        public const int ScreenHeight = 1080;
+        // Window settings - NOW DYNAMIC based on actual window size
+        public static int ScreenWidth => Raylib.GetScreenWidth();
+        public static int ScreenHeight => Raylib.GetScreenHeight();
         public const string WindowTitle = "Village Builder - Real-Time Strategy";
         public const int TargetFPS = 60;
 
@@ -38,10 +38,19 @@ namespace VillageBuilder.Game.Graphics
         /// <param name="allowFullscreenIfNeeded">Ignored - always uses borderless windowed mode.</param>
         public static void InitializeWindow(bool allowFullscreenIfNeeded = true)
         {
-            // Query primary monitor size with fallback
+            // IMPORTANT: Must set config flags BEFORE InitWindow
+            Raylib.SetConfigFlags(ConfigFlags.UndecoratedWindow | ConfigFlags.VSyncHint);
+
+            // Initialize with small window first to enable monitor queries
+            // We'll resize immediately after querying the monitor
+            Raylib.InitWindow(800, 600, WindowTitle);
+
+            // NOW we can query monitor size (after Raylib is initialized)
             int monitorWidth = Raylib.GetMonitorWidth(0);
             int monitorHeight = Raylib.GetMonitorHeight(0);
-            
+
+            Console.WriteLine($"GraphicsConfig: Detected monitor 0 resolution: {monitorWidth}x{monitorHeight}");
+
             // Fallback to common resolution if monitor query fails
             if (monitorWidth == 0 || monitorHeight == 0)
             {
@@ -50,21 +59,18 @@ namespace VillageBuilder.Game.Graphics
                 Console.WriteLine("WARNING: Monitor detection failed, using fallback 1920x1080");
             }
 
-            // Disable MSAA and enable flags for pixel-perfect rendering
-            Raylib.SetConfigFlags(ConfigFlags.UndecoratedWindow | ConfigFlags.VSyncHint);
-            
-            // Initialize window at monitor resolution
-            Raylib.InitWindow(monitorWidth, monitorHeight, WindowTitle);
-            
-            // Set window position to top-left corner (0, 0) to cover taskbar
+            // Resize window to full monitor size
+            Raylib.SetWindowSize(monitorWidth, monitorHeight);
+
+            // Set window position to top-left corner (0, 0) to cover entire screen including taskbar
             Raylib.SetWindowPosition(0, 0);
-            
+
             // Disable ESC key as exit key (we handle ESC ourselves for UI navigation)
             Raylib.SetExitKey(0);
-            
+
             Raylib.SetTargetFPS(TargetFPS);
-            
-            Console.WriteLine($"GraphicsConfig: Initialized borderless windowed mode ({monitorWidth}x{monitorHeight}) at position (0, 0)");
+
+            Console.WriteLine($"GraphicsConfig: Initialized borderless fullscreen at ({monitorWidth}x{monitorHeight}) position (0, 0)");
         }
 
         public static void LoadFont()
@@ -139,50 +145,104 @@ namespace VillageBuilder.Game.Graphics
             codepoints[idx++] = 0x256A; // ╪
             codepoints[idx++] = 0x256B; // ╫
             codepoints[idx++] = 0x25CA; // ◊
-            
+
+            // Smoke characters (critical for particle effects)
+            codepoints[idx++] = 0x2219; // ∙ (bullet operator)
+            codepoints[idx++] = 0x02D9; // ˙ (dot above)
+            codepoints[idx++] = 0x2218; // ∘ (ring operator)
+            codepoints[idx++] = 0x25E6; // ◦ (white bullet)
+
+            // Additional useful symbols
+            codepoints[idx++] = 0x2192; // → (right arrow)
+            codepoints[idx++] = 0x2190; // ← (left arrow)
+            codepoints[idx++] = 0x2191; // ↑ (up arrow)
+            codepoints[idx++] = 0x2193; // ↓ (down arrow)
+            codepoints[idx++] = 0x2194; // ↔ (left-right arrow)
+            codepoints[idx++] = 0x21D2; // ⇒ (rightwards double arrow)
+            codepoints[idx++] = 0x279C; // ➜ (heavy round-tipped rightwards arrow)
+
+            // Emojis (if supported by font)
+            codepoints[idx++] = 0x1F3E0; // 🏠 (house)
+            codepoints[idx++] = 0x1F528; // 🔨 (hammer)
+            codepoints[idx++] = 0x2692; // ⚒ (hammer and pick)
+            codepoints[idx++] = 0x1F4A4; // 💤 (zzz)
+
             Array.Resize(ref codepoints, idx);
 
-            // Try to load bundled fonts first, then fallback to system fonts
-            // Prioritize fonts with good weight and clarity at medium sizes
+            // Font priority order - UPDATED for full ASCII/Unicode support
+            // Priority: Fonts that exist on user's system > Unicode coverage > Readability
             string[] fontPaths = new[]
             {
-                "C:\\Windows\\Fonts\\consola.ttf",         // Consolas - good weight and readability
-                "C:\\Windows\\Fonts\\lucon.ttf",           // Lucida Console - thick and clear
-                "C:\\Windows\\Fonts\\cour.ttf",            // Courier New - too thin
-                "assets/fonts/Px437_IBM_VGA_8x16.ttf",     // Authentic DOS VGA font
-                "assets/fonts/PerfectDOSVGA437.ttf",       // Another DOS font option
-                "assets/fonts/CascadiaMono.ttf",
-                "assets/fonts/CascadiaCode.ttf",
-                "assets/fonts/DejaVuSansMono.ttf",
+                // BEST: Cascadia fonts (check both Mono and Code variants)
+                "C:\\Windows\\Fonts\\CascadiaCode.ttf",        // Cascadia Code - excellent Unicode
+                "C:\\Windows\\Fonts\\CascadiaMono.ttf",        // Cascadia Mono - BEST for Unicode + readability
+                "C:\\Windows\\Fonts\\Cascadia.ttf",            // Generic Cascadia
+
+                // EXCELLENT: Open-source with full Unicode coverage
+                "C:\\Windows\\Fonts\\DejaVuSansMono.ttf",      // DejaVu Sans Mono - excellent Unicode
                 "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",  // Linux
-                "/System/Library/Fonts/Monaco.ttf"          // macOS
+
+                // GOOD: Alternative modern fonts
+                "C:\\Windows\\Fonts\\JetBrainsMono-Regular.ttf", // JetBrains Mono
+                "C:\\Windows\\Fonts\\IBMPlexMono-Regular.ttf", // IBM Plex Mono
+
+                // Bundled fonts (if provided with game)
+                "assets/fonts/CascadiaCode.ttf",
+                "assets/fonts/CascadiaMono.ttf",
+                "assets/fonts/DejaVuSansMono.ttf",
+                "assets/fonts/JetBrainsMono.ttf",
+                "assets/fonts/IBMPlexMono.ttf",
+
+                // FALLBACK: Standard Windows fonts (limited Unicode)
+                "C:\\Windows\\Fonts\\consola.ttf",             // Consolas - limited Unicode (was loading before!)
+                "C:\\Windows\\Fonts\\lucon.ttf",               // Lucida Console
+
+                // RETRO: Authentic DOS fonts (good for aesthetic, limited support)
+                "assets/fonts/Px437_IBM_VGA_8x16.ttf",         // Authentic DOS VGA font
+                "assets/fonts/PerfectDOSVGA437.ttf",           // Another DOS font option
+
+                // SYSTEM: macOS fallbacks
+                "/System/Library/Fonts/Monaco.ttf",            // macOS
+                "/System/Library/Fonts/Menlo.ttf"              // macOS alternative
             };
+
+            System.Console.WriteLine("=== Font Loading Debug ===");
+            System.Console.WriteLine($"Trying {fontPaths.Length} font paths in priority order...");
 
             foreach (var fontPath in fontPaths)
             {
+                System.Console.WriteLine($"  Checking: {fontPath}");
+
                 if (System.IO.File.Exists(fontPath))
                 {
+                    System.Console.WriteLine($"    → File exists! Attempting to load...");
                     try
                     {
                         ConsoleFont = Raylib.LoadFontEx(fontPath, ConsoleFontSize, codepoints, codepoints.Length);
-                        
+
                         // CRITICAL: Set point filter (nearest neighbor) for crisp pixel-perfect rendering
                         // This must be done AFTER loading the font
                         Raylib.SetTextureFilter(ConsoleFont.Texture, TextureFilter.Point);
-                        
+
                         // Verify the texture filter was set
-                        System.Console.WriteLine($"✓ Font loaded: {System.IO.Path.GetFileName(fontPath)}");
+                        System.Console.WriteLine($"✓ Font loaded successfully: {System.IO.Path.GetFileName(fontPath)}");
+                        System.Console.WriteLine($"  Full path: {fontPath}");
                         System.Console.WriteLine($"  Font size: {ConsoleFontSize}px");
                         System.Console.WriteLine($"  Texture ID: {ConsoleFont.Texture.Id}");
                         System.Console.WriteLine($"  Texture filter: Point (nearest neighbor) - CRISP MODE");
-                        
+                        System.Console.WriteLine("==========================");
+
                         _fontLoaded = true;
                         return;
                     }
                     catch (Exception ex)
                     {
-                        System.Console.WriteLine($"✗ Failed to load {fontPath}: {ex.Message}");
+                        System.Console.WriteLine($"    ✗ Failed to load: {ex.Message}");
                     }
+                }
+                else
+                {
+                    System.Console.WriteLine($"    ✗ File not found");
                 }
             }
 

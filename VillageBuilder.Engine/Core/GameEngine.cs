@@ -18,10 +18,13 @@ namespace VillageBuilder.Engine.Core
         public List<Building> Buildings { get; }
         public CommandQueue CommandQueue { get; }
         public GameConfiguration Configuration { get; }
-        
+
         private int _seed;
         private int _currentTick;
         private int _nextBuildingId = 1;
+
+        // Track tiles that have people on them for efficient clearing
+        private readonly HashSet<(int x, int y)> _occupiedTiles = new HashSet<(int x, int y)>();
 
         public int CurrentTick => _currentTick;
         public int GetNextBuildingId() => _nextBuildingId++;
@@ -143,28 +146,29 @@ namespace VillageBuilder.Engine.Core
         /// </summary>
         public List<CommandExecutionRecord> SimulateTick()
         {
-            // Clear all tile person registrations at start of tick
-            for (int x = 0; x < Grid.Width; x++)
+            // Clear only tiles that had people on them last tick (optimized from O(Width*Height) to O(people))
+            foreach (var (x, y) in _occupiedTiles)
             {
-                for (int y = 0; y < Grid.Height; y++)
+                var tile = Grid.GetTile(x, y);
+                if (tile != null)
                 {
-                    var tile = Grid.GetTile(x, y);
-                    if (tile != null)
-                    {
-                        tile.PeopleOnTile.Clear();
-                    }
+                    tile.PeopleOnTile.Clear();
                 }
             }
-            
-            // Register all people on their current tiles
+            _occupiedTiles.Clear();
+
+            // Register all people on their current tiles and track occupied tiles
             foreach (var family in Families)
             {
-                foreach (var person in family.Members.Where(p => p.IsAlive))
+                foreach (var person in family.Members)
                 {
+                    if (!person.IsAlive) continue;
+
                     var tile = Grid.GetTile(person.Position.X, person.Position.Y);
                     if (tile != null)
                     {
                         tile.PeopleOnTile.Add(person);
+                        _occupiedTiles.Add((person.Position.X, person.Position.Y));
                     }
                 }
             }
@@ -578,6 +582,7 @@ namespace VillageBuilder.Engine.Core
             // Send workers to their jobs at work start time
             if (Time.Hour == GameTime.WorkStartHour)
             {
+                // Send regular workers
                 foreach (var family in Families)
                 {
                     foreach (var person in family.Members.Where(p => p.IsAlive && p.AssignedBuilding != null))
@@ -586,6 +591,18 @@ namespace VillageBuilder.Engine.Core
                         if (!person.IsAtWork() && person.CurrentTask != PersonTask.MovingToLocation)
                         {
                             SendPersonToWork(person);
+                        }
+                    }
+                }
+
+                // Send construction workers back to construction sites
+                foreach (var building in Buildings.Where(b => !b.IsConstructed))
+                {
+                    foreach (var worker in building.ConstructionWorkers.ToList())
+                    {
+                        if (worker.IsAlive && !worker.IsAtConstructionSite(building) && worker.CurrentTask != PersonTask.MovingToLocation)
+                        {
+                            SendPersonToConstruction(worker, building);
                         }
                     }
                 }
@@ -697,13 +714,41 @@ namespace VillageBuilder.Engine.Core
                 return;
             }
 
-            var path = Pathfinding.FindPath(person.Position, targetPosition, Grid);
-            
-            if (path != null && path.Count > 0)
-            {
-                person.SetPath(path);
-                person.CurrentTask = PersonTask.GoingHome;
+                        var path = Pathfinding.FindPath(person.Position, targetPosition, Grid);
+
+                        if (path != null && path.Count > 0)
+                        {
+                            person.SetPath(path);
+                            person.CurrentTask = PersonTask.GoingHome;
+                        }
+                    }
+
+                    /// <summary>
+                    /// Send a construction worker back to their construction site
+                    /// </summary>
+                    private void SendPersonToConstruction(Person person, Building building)
+                    {
+                        // Get a position near the construction site (door or occupied tile)
+                        var doorPositions = building.GetDoorPositions();
+                        Vector2Int targetPosition;
+
+                        if (doorPositions.Count > 0)
+                        {
+                            targetPosition = doorPositions[0];
+                        }
+                        else
+                        {
+                            // No door yet (building not complete), use building center
+                            targetPosition = new Vector2Int(building.X, building.Y);
+                        }
+
+                        var path = Pathfinding.FindPath(person.Position, targetPosition, Grid);
+
+                        if (path != null && path.Count > 0)
+                        {
+                            person.SetPath(path);
+                            person.CurrentTask = PersonTask.Constructing;
+                        }
+                    }
+                }
             }
-        }
-    }
-}

@@ -128,6 +128,34 @@ namespace VillageBuilder.Game.Graphics.UI
                 y += LineHeight;
             }
 
+            y += 5;
+
+            // Save/Load status
+            var saveFiles = VillageBuilder.Game.Core.SaveLoadService.GetSaveFiles();
+            var quicksaves = saveFiles.Where(s => s.StartsWith("quicksave_")).OrderByDescending(s => s).ToArray();
+            if (quicksaves.Any())
+            {
+                var latestSave = quicksaves.First();
+                var saveInfo = VillageBuilder.Game.Core.SaveLoadService.GetSaveInfo(latestSave);
+                if (saveInfo != null)
+                {
+                    var timeSince = DateTime.Now - saveInfo.SavedAt;
+                    string timeText = timeSince.TotalMinutes < 1 
+                        ? "< 1 min ago" 
+                        : $"{(int)timeSince.TotalMinutes} min ago";
+
+                    GraphicsConfig.DrawConsoleText($"│ ⚡ Last Save:  {timeText}", 
+                        _sidebarX + Padding, y, SmallFontSize, new Color(255, 200, 50, 255));
+                    y += LineHeight;
+                }
+            }
+            else
+            {
+                GraphicsConfig.DrawConsoleText("│ ⚡ No saves yet (F5)", 
+                    _sidebarX + Padding, y, SmallFontSize, dimColor);
+                y += LineHeight;
+            }
+
             // Draw section separator
             GraphicsConfig.DrawConsoleText("└" + new string('─', (_sidebarWidth - Padding * 2 - 8) / 8), 
                 _sidebarX + Padding, y, FontSize, new Color(100, 100, 120, 255));
@@ -151,6 +179,9 @@ namespace VillageBuilder.Game.Graphics.UI
                 ("+", "Speed Up (max 16x)", new Color(255, 255, 100, 255)),
                 ("-", "Slow Down", new Color(255, 255, 100, 255)),
                 ("0", "Reset to 1x", new Color(255, 255, 100, 255)),
+                ("", "", Color.White), // Spacer
+                ("F5", "Quick Save", new Color(255, 200, 50, 255)),
+                ("F9", "Quick Load", new Color(255, 200, 50, 255)),
                 ("", "", Color.White), // Spacer
                 ("H", "Build House", new Color(255, 180, 100, 255)),
                 ("F", "Build Farm", new Color(255, 180, 100, 255)),
@@ -286,14 +317,34 @@ namespace VillageBuilder.Game.Graphics.UI
 
             DrawSectionHeader("PERSON INFO", y);
             y += LineHeight + 5;
-            
-            // Show person index if multiple people on tile
+
+            // Show visual list of people on tile if multiple people present
             if (selectionManager != null && selectionManager.HasMultiplePeople())
             {
-                var countText = $"│ Person {selectionManager.SelectedPersonIndex + 1} of {selectionManager.PeopleAtSelectedTile!.Count}";
-                GraphicsConfig.DrawConsoleText(countText, _sidebarX + Padding, y, SmallFontSize, new Color(150, 150, 255, 255));
+                var headerText = $"│ People on this tile ({selectionManager.PeopleAtSelectedTile!.Count}):";
+                GraphicsConfig.DrawConsoleText(headerText, _sidebarX + Padding, y, SmallFontSize, new Color(150, 150, 255, 255));
                 y += LineHeight;
-                GraphicsConfig.DrawConsoleText("│ [Arrows] or [Tab] to cycle", _sidebarX + Padding, y, SmallFontSize - 2, new Color(120, 120, 150, 255));
+
+                // Render each person in the list with selection indicator
+                for (int i = 0; i < selectionManager.PeopleAtSelectedTile.Count; i++)
+                {
+                    var p = selectionManager.PeopleAtSelectedTile[i];
+                    bool isSelected = i == selectionManager.SelectedPersonIndex;
+
+                    // Selection indicator (arrow or bullet)
+                    string indicator = isSelected ? "│ ► " : "│   ";
+                    var nameColor = isSelected ? new Color(255, 255, 100, 255) : new Color(180, 180, 180, 255);
+
+                    // Show name with task indicator
+                    string taskIcon = GetTaskIcon(p.CurrentTask);
+                    string displayText = $"{indicator}{taskIcon} {p.FirstName} {p.LastName}";
+
+                    GraphicsConfig.DrawConsoleText(displayText, _sidebarX + Padding, y, SmallFontSize - 2, nameColor);
+                    y += LineHeight - 2;
+                }
+
+                y += 5;
+                GraphicsConfig.DrawConsoleText("│ [Click name] or [Arrows/Tab] to switch", _sidebarX + Padding, y, SmallFontSize - 2, new Color(120, 120, 150, 255));
                 y += LineHeight + 5;
             }
 
@@ -396,6 +447,22 @@ namespace VillageBuilder.Game.Graphics.UI
                 VillageBuilder.Engine.Entities.PersonTask.MovingToLocation => new Color(255, 200, 100, 255),
                 VillageBuilder.Engine.Entities.PersonTask.Idle => new Color(200, 200, 200, 255),
                 _ => Color.Gray
+            };
+        }
+
+        private string GetTaskIcon(VillageBuilder.Engine.Entities.PersonTask task)
+        {
+            return task switch
+            {
+                VillageBuilder.Engine.Entities.PersonTask.Sleeping => "💤",
+                VillageBuilder.Engine.Entities.PersonTask.GoingHome => "🏠",
+                VillageBuilder.Engine.Entities.PersonTask.GoingToWork => "➜",
+                VillageBuilder.Engine.Entities.PersonTask.WorkingAtBuilding => "⚒",
+                VillageBuilder.Engine.Entities.PersonTask.Constructing => "🔨",
+                VillageBuilder.Engine.Entities.PersonTask.Resting => "☺",
+                VillageBuilder.Engine.Entities.PersonTask.MovingToLocation => "↔",
+                VillageBuilder.Engine.Entities.PersonTask.Idle => "○",
+                _ => "·"
             };
         }
         
