@@ -7,7 +7,8 @@ namespace VillageBuilder.Engine.Resources
         Stone,
         Iron,
         Coal,
-        
+        Fur,          // NEW: From hunting animals
+
         // Food
         Grain,
         Vegetables,

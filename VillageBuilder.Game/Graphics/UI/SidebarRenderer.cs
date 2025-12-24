@@ -4,6 +4,7 @@ using System.Linq;
 using Raylib_cs;
 using VillageBuilder.Engine.Core;
 using VillageBuilder.Engine.Buildings;
+using VillageBuilder.Engine.Entities.Wildlife;
 using VillageBuilder.Engine.World;
 
 namespace VillageBuilder.Game.Graphics.UI
@@ -50,6 +51,11 @@ namespace VillageBuilder.Game.Graphics.UI
                 {
                     // Show person info
                     currentY = RenderPersonInfo(engine, selectionManager.SelectedPerson, currentY, selectionManager);
+                }
+                else if (selectionManager.SelectedWildlife != null)
+                {
+                    // Show wildlife info
+                    currentY = RenderWildlifeInfo(engine, selectionManager.SelectedWildlife, currentY, selectionManager);
                 }
                 else if (selectionManager.SelectedBuilding != null)
                 {
@@ -537,12 +543,180 @@ namespace VillageBuilder.Game.Graphics.UI
                         new Color(100, 100, 120, 255),
                         '?'
                     );
-                    y += LineHeight;
+                                y += LineHeight;
 
-                    return y + 5;
-                }
-        
-        private string GetPersonTaskText(VillageBuilder.Engine.Entities.Person person)
+                                return y + 5;
+                            }
+
+                    private int RenderWildlifeInfo(GameEngine engine, WildlifeEntity wildlife, int y, VillageBuilder.Game.Core.SelectionManager? selectionManager)
+                    {
+                        var textColor = new Color(200, 200, 200, 255);
+
+                        // Header
+                        DrawSectionHeader("WILDLIFE INFO", y);
+                        y += LineHeight + 5;
+
+                        // Show cycling hint if multiple wildlife on tile
+                        if (selectionManager != null && selectionManager.HasMultipleWildlife())
+                        {
+                            var count = selectionManager.WildlifeAtSelectedTile?.Count ?? 0;
+                            var index = selectionManager.SelectedWildlifeIndex + 1;
+
+                            if (count > 1)
+                            {
+                                GraphicsConfig.DrawConsoleTextAuto($"  Wildlife {index} of {count} on this tile", _sidebarX + Padding, y, SmallFontSize - 2, new Color(255, 200, 100, 255));
+                                y += LineHeight;
+                            }
+
+                            y += 5;
+                            GraphicsConfig.DrawConsoleTextAuto("  [Arrows/Tab] to switch", _sidebarX + Padding, y, SmallFontSize - 2, new Color(120, 120, 150, 255));
+                            y += LineHeight + 5;
+                        }
+
+                        // Wildlife name and type
+                        var typeColor = wildlife.IsPredator ? new Color(255, 100, 100, 255) : new Color(150, 255, 150, 255);
+                        GraphicsConfig.DrawConsoleTextAuto($"  {wildlife.Name}", _sidebarX + Padding, y, SmallFontSize, new Color(255, 255, 100, 255));
+                        y += LineHeight;
+
+                        var categoryText = wildlife.IsPredator ? "Predator" : "Prey";
+                        GraphicsConfig.DrawConsoleTextAuto($"  Type: {wildlife.Type} ({categoryText})", _sidebarX + Padding, y, SmallFontSize, typeColor);
+                        y += LineHeight;
+
+                        // Stats
+                        GraphicsConfig.DrawConsoleTextAuto($"  Age: {wildlife.Age} days | {wildlife.Gender}", _sidebarX + Padding, y, SmallFontSize, textColor);
+                        y += LineHeight;
+
+                        // Current behavior with color coding
+                        var behaviorColor = GetWildlifeBehaviorColor(wildlife.CurrentBehavior);
+                        GraphicsConfig.DrawConsoleTextAuto($"  Behavior: {wildlife.CurrentBehavior}", _sidebarX + Padding, y, SmallFontSize, behaviorColor);
+                        y += LineHeight;
+
+                        y += 5;
+
+                        // Health bar
+                        var healthPercent = wildlife.Health / 100f;
+                        var healthColor = healthPercent > 0.5f ? new Color(0, 200, 0, 255) : new Color(200, 0, 0, 255);
+                        GraphicsConfig.DrawConsoleTextAuto($"  Health: ", _sidebarX + Padding, y, SmallFontSize, textColor);
+                        DrawStatBar(_sidebarX + Padding + 80, y, 120, wildlife.Health, healthColor);
+                        y += LineHeight;
+
+                        // Hunger bar
+                        var hungerPercent = wildlife.Hunger / 100f;
+                        var hungerColor = hungerPercent < 0.5f ? new Color(0, 200, 0, 255) : new Color(200, 100, 0, 255);
+                        GraphicsConfig.DrawConsoleTextAuto($"  Hunger: ", _sidebarX + Padding, y, SmallFontSize, textColor);
+                        DrawStatBar(_sidebarX + Padding + 80, y, 120, wildlife.Hunger, hungerColor);
+                        y += LineHeight;
+
+                        // Energy bar
+                        var energyColor = wildlife.Energy > 50 ? new Color(100, 150, 255, 255) : new Color(150, 150, 150, 255);
+                        GraphicsConfig.DrawConsoleTextAuto($"  Energy: ", _sidebarX + Padding, y, SmallFontSize, textColor);
+                        DrawStatBar(_sidebarX + Padding + 80, y, 120, wildlife.Energy, energyColor);
+                        y += LineHeight;
+
+                        // Fear level
+                        if (wildlife.Fear > 0)
+                        {
+                            var fearColor = new Color(255, 200, 0, 255);
+                            GraphicsConfig.DrawConsoleTextAuto($"  Fear: ", _sidebarX + Padding, y, SmallFontSize, textColor);
+                            DrawStatBar(_sidebarX + Padding + 80, y, 120, wildlife.Fear, fearColor);
+                            y += LineHeight;
+                        }
+
+                        y += 10;
+
+                        // Ecology info
+                        DrawSectionHeader("ECOLOGY", y);
+                        y += LineHeight + 5;
+
+                        if (wildlife.IsPredator && wildlife.PreyTypes.Count > 0)
+                        {
+                            GraphicsConfig.DrawConsoleTextAuto($"  Hunts: {string.Join(", ", wildlife.PreyTypes)}", _sidebarX + Padding, y, SmallFontSize, new Color(255, 150, 150, 255));
+                            y += LineHeight;
+                        }
+
+                        if (wildlife.IsPrey && wildlife.PredatorTypes.Count > 0)
+                        {
+                            GraphicsConfig.DrawConsoleTextAuto($"  Fears: {string.Join(", ", wildlife.PredatorTypes)}", _sidebarX + Padding, y, SmallFontSize, new Color(255, 200, 100, 255));
+                            y += LineHeight;
+                        }
+
+                        // Resource drops
+                        if (wildlife.ResourceDrops.Count > 0)
+                        {
+                            var resources = string.Join(", ", wildlife.ResourceDrops.Select(r => $"{r.Value} {r.Key}"));
+                            GraphicsConfig.DrawConsoleTextAuto($"  Drops: {resources}", _sidebarX + Padding, y, SmallFontSize, new Color(150, 255, 150, 255));
+                            y += LineHeight;
+                        }
+
+                        y += 10;
+
+                        // Commands
+                        DrawSectionHeader("COMMANDS", y);
+                        y += LineHeight + 5;
+
+                        GraphicsConfig.DrawConsoleTextAuto("  [ESC  ] Back to Map", _sidebarX + Padding, y, SmallFontSize, new Color(150, 200, 255, 255));
+                        y += LineHeight;
+
+                        if (selectionManager != null && selectionManager.HasMultipleWildlife())
+                        {
+                            GraphicsConfig.DrawConsoleTextAuto("  [Arrows] Cycle Wildlife", _sidebarX + Padding, y, SmallFontSize, new Color(150, 200, 255, 255));
+                            y += LineHeight;
+                        }
+
+                        y += LineHeight;
+
+                        // Hint for hunting (future feature)
+                        if (wildlife.IsPrey)
+                        {
+                            GraphicsConfig.DrawConsoleTextAuto("  Hunt command: Coming soon", _sidebarX + Padding, y, SmallFontSize, new Color(120, 120, 120, 255));
+                            y += LineHeight;
+                        }
+
+                        // Draw section separator
+                        GraphicsConfig.DrawUIDecorationLine(
+                            UIIconType.SeparatorLine,
+                            _sidebarX + Padding, y,
+                            _sidebarWidth - Padding * 2,
+                            FontSize,
+                            new Color(100, 100, 120, 255),
+                            '─'
+                        );
+                        y += LineHeight;
+
+                        return y + 5;
+                    }
+
+                    private Color GetWildlifeBehaviorColor(WildlifeBehavior behavior)
+                    {
+                        return behavior switch
+                        {
+                            WildlifeBehavior.Idle => new Color(200, 200, 200, 255),
+                            WildlifeBehavior.Grazing => new Color(150, 255, 150, 255),
+                            WildlifeBehavior.Wandering => new Color(200, 200, 255, 255),
+                            WildlifeBehavior.Fleeing => new Color(255, 255, 0, 255),
+                            WildlifeBehavior.Hunting => new Color(255, 100, 100, 255),
+                            WildlifeBehavior.Eating => new Color(255, 200, 100, 255),
+                            WildlifeBehavior.Resting => new Color(150, 150, 255, 255),
+                            WildlifeBehavior.Breeding => new Color(255, 150, 255, 255),
+                            WildlifeBehavior.Dead => new Color(100, 100, 100, 255),
+                            _ => new Color(150, 150, 150, 255)
+                        };
+                    }
+
+                    private void DrawStatBar(int x, int y, int width, int value, Color color)
+                    {
+                        // Background bar
+                        Raylib.DrawRectangle(x, y + 2, width, 8, new Color(40, 40, 40, 255));
+
+                        // Filled bar
+                        int filledWidth = (int)(width * (value / 100f));
+                        Raylib.DrawRectangle(x, y + 2, filledWidth, 8, color);
+
+                        // Value text
+                        GraphicsConfig.DrawConsoleText($"{value}", x + width + 5, y, SmallFontSize, color);
+                    }
+
+                    private string GetPersonTaskText(VillageBuilder.Engine.Entities.Person person)
         {
             return person.CurrentTask switch
             {

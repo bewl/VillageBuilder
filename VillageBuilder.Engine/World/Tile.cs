@@ -1,5 +1,6 @@
 using VillageBuilder.Engine.Buildings;
 using VillageBuilder.Engine.Entities;
+using VillageBuilder.Engine.Entities.Wildlife;
 
 namespace VillageBuilder.Engine.World
 {
@@ -47,6 +48,11 @@ namespace VillageBuilder.Engine.World
         /// All people currently standing on this tile
         /// </summary>
         public List<Person> PeopleOnTile { get; }
+
+        /// <summary>
+        /// All wildlife entities currently on this tile
+        /// </summary>
+        public List<WildlifeEntity> WildlifeOnTile { get; }
 
         /// <summary>
         /// Visual decorations for terrain variety (trees, rocks, flowers, wildlife, etc.)
@@ -107,6 +113,7 @@ namespace VillageBuilder.Engine.World
                     Y = y;
                     Type = type;
                     PeopleOnTile = new List<Person>();
+                    WildlifeOnTile = new List<WildlifeEntity>();
                     TerrainVariant = Random.Shared.Next(0, 4); // Random visual variant 0-3
                 }
 

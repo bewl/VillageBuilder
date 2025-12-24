@@ -164,13 +164,25 @@ namespace VillageBuilder.Game.Graphics
                         _selectionManager.CycleNextPerson();
                     }
                 }
+                // If multiple wildlife selected, cycle through them
+                else if (_selectionManager.HasMultipleWildlife())
+                {
+                    if (Raylib.IsKeyDown(KeyboardKey.LeftShift) || Raylib.IsKeyDown(KeyboardKey.RightShift))
+                    {
+                        _selectionManager.CyclePreviousWildlife();
+                    }
+                    else
+                    {
+                        _selectionManager.CycleNextWildlife();
+                    }
+                }
                 // Otherwise, toggle road snap when in building mode
                 else if (_selectedBuildingType.HasValue)
                 {
                     _roadSnapEnabled = !_roadSnapEnabled;
                 }
             }
-            
+
             // Arrow keys for cycling people (when person selected and multiple on tile)
             if (_selectionManager.HasMultiplePeople())
             {
@@ -181,6 +193,18 @@ namespace VillageBuilder.Game.Graphics
                 else if (Raylib.IsKeyPressed(KeyboardKey.Right) || Raylib.IsKeyPressed(KeyboardKey.Down))
                 {
                     _selectionManager.CycleNextPerson();
+                }
+            }
+            // Arrow keys for cycling wildlife (when wildlife selected and multiple on tile)
+            else if (_selectionManager.HasMultipleWildlife())
+            {
+                if (Raylib.IsKeyPressed(KeyboardKey.Left) || Raylib.IsKeyPressed(KeyboardKey.Up))
+                {
+                    _selectionManager.CyclePreviousWildlife();
+                }
+                else if (Raylib.IsKeyPressed(KeyboardKey.Right) || Raylib.IsKeyPressed(KeyboardKey.Down))
+                {
+                    _selectionManager.CycleNextWildlife();
                 }
             }
 
@@ -257,12 +281,22 @@ namespace VillageBuilder.Game.Graphics
                                     _selectionManager.SelectPeopleAtTile(clickedTile.PeopleOnTile);
                                 }
                             }
-                            // Priority 3: Select building if present
+                            // Priority 3: Select wildlife if present
+                            else if (clickedTile.WildlifeOnTile.Count > 0)
+                            {
+                                // Select wildlife at this tile
+                                var aliveWildlife = clickedTile.WildlifeOnTile.Where(w => w.IsAlive).ToList();
+                                if (aliveWildlife.Count > 0)
+                                {
+                                    _selectionManager.SelectWildlifeAtTile(aliveWildlife);
+                                }
+                            }
+                            // Priority 4: Select building if present
                             else if (_hoveredBuilding != null)
                             {
                                 _selectionManager.SelectBuilding(_hoveredBuilding);
                             }
-                            // Priority 4: Select empty tile (auto tile inspection)
+                            // Priority 5: Select empty tile (auto tile inspection)
                             else
                             {
                                 _selectionManager.SelectTile(clickedTile);

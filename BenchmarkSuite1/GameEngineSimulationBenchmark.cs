@@ -3,6 +3,7 @@ using BenchmarkDotNet.Jobs;
 using VillageBuilder.Engine.Core;
 using VillageBuilder.Engine.Buildings;
 using VillageBuilder.Engine.Entities;
+using VillageBuilder.Engine.Entities.Wildlife;
 using VillageBuilder.Engine.World;
 using Microsoft.VSDiagnostics;
 using System;
@@ -63,6 +64,7 @@ namespace VillageBuilder.Benchmarks
         {
             public List<(Family, List<(Person, Vector2Int, PersonTask, Building?)>)> FamilyStates { get; set; } = new();
             public List<(Building, int, bool, List<Person>, List<Person>)> BuildingStates { get; set; } = new();
+            public List<(WildlifeEntity, Vector2Int, WildlifeBehavior, int, int, int)> WildlifeStates { get; set; } = new();
         }
 
         private GameEngineSnapshot TakeSnapshot(GameEngine engine)
@@ -90,6 +92,22 @@ namespace VillageBuilder.Benchmarks
                 ));
             }
 
+            // Snapshot wildlife states
+            if (engine.WildlifeManager != null)
+            {
+                foreach (var wildlife in engine.WildlifeManager.Wildlife.Where(w => w.IsAlive))
+                {
+                    snapshot.WildlifeStates.Add((
+                        wildlife,
+                        wildlife.Position,
+                        wildlife.CurrentBehavior,
+                        wildlife.Health,
+                        wildlife.Hunger,
+                        wildlife.Energy
+                    ));
+                }
+            }
+
             return snapshot;
         }
 
@@ -108,17 +126,28 @@ namespace VillageBuilder.Benchmarks
                 }
             }
 
-            // Restore building states
-            foreach (var (building, progress, isConstructed, constructionWorkers, workers) in snapshot.BuildingStates)
-            {
-                building.ConstructionProgress = progress;
-                building.IsConstructed = isConstructed;
-                building.ConstructionWorkers.Clear();
-                building.ConstructionWorkers.AddRange(constructionWorkers);
-                building.Workers.Clear();
-                building.Workers.AddRange(workers);
+                // Restore building states
+                foreach (var (building, progress, isConstructed, constructionWorkers, workers) in snapshot.BuildingStates)
+                {
+                    building.ConstructionProgress = progress;
+                    building.IsConstructed = isConstructed;
+                    building.ConstructionWorkers.Clear();
+                    building.ConstructionWorkers.AddRange(constructionWorkers);
+                    building.Workers.Clear();
+                    building.Workers.AddRange(workers);
+                }
+
+                // Restore wildlife states
+                foreach (var (wildlife, position, behavior, health, hunger, energy) in snapshot.WildlifeStates)
+                {
+                    wildlife.Position = position;
+                    wildlife.CurrentBehavior = behavior;
+                    wildlife.Health = health;
+                    wildlife.Hunger = hunger;
+                    wildlife.Energy = energy;
+                    wildlife.ClearPath();
+                }
             }
-        }
 
         private GameEngine CreateEngine(int familyCount, int buildingCount)
         {

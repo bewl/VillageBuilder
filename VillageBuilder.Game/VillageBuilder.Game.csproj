@@ -58,6 +58,11 @@
         <None Update="assets\sprites\emojis\1faa8.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
         <None Update="assets\sprites\emojis\1fab5.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
         <None Update="assets\sprites\emojis\1fad0.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <!-- NEW: Predator wildlife sprites -->
+        <None Update="assets\sprites\emojis\1f98a.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None> <!-- Fox -->
+        <None Update="assets\sprites\emojis\1f43a.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None> <!-- Wolf -->
+        <None Update="assets\sprites\emojis\1f43b.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None> <!-- Bear -->
+        <None Update="assets\sprites\emojis\1f417.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None> <!-- Boar -->
 
         <!-- UI Icon sprites for modern UI rendering -->
         <None Update="Assets\sprites\ui_icons\emojis\1f33e.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>

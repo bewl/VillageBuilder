@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raylib_cs;
 using VillageBuilder.Engine.Core;
+using VillageBuilder.Engine.Entities.Wildlife;
 using VillageBuilder.Engine.World;
 using VillageBuilder.Engine.Buildings;
 using System.Numerics;
@@ -72,19 +73,25 @@ namespace VillageBuilder.Game.Graphics.UI
                             bgColor = DarkenColor(bgColor, darknessFactor);
                         }
 
-                        Raylib.DrawRectangle((int)pos.X, (int)pos.Y, tileSize, tileSize, bgColor);
+                                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, tileSize, tileSize, bgColor);
 
-                        // Draw base tile glyph with variation
-                        DrawTileGlyph(tile, pos, tileSize, darknessFactor);
+                                    // Draw base tile glyph (SKIP in sprite mode to reduce visual clutter)
+                                    if (!GraphicsConfig.UseSpriteMode)
+                                    {
+                                        DrawTileGlyph(tile, pos, tileSize, darknessFactor);
+                                    }
 
-                        // NEW: Draw terrain decorations on top
-                        DrawTerrainDecorations(tile, pos, tileSize, darknessFactor, engine.Time);
-                    }
-            }
+                                    // Draw terrain decorations on top
+                                    DrawTerrainDecorations(tile, pos, tileSize, darknessFactor, engine.Time);
+                                }
+                        }
             
             // Render people on top of everything
             RenderPeople(engine, tileSize, minX, maxX, minY, maxY, selectionManager);
-            
+
+            // Render wildlife
+            RenderWildlife(engine, tileSize, minX, maxX, minY, maxY, selectionManager);
+
                 // Render selection indicators for buildings
                 if (selectionManager?.SelectedBuilding != null)
                 {
@@ -300,13 +307,14 @@ namespace VillageBuilder.Game.Graphics.UI
         {
             return tile.Type switch
             {
-                TileType.Grass => new Color(20, 40, 20, 255),
-                TileType.Forest => new Color(10, 30, 10, 255),
-                TileType.Water => new Color(10, 20, 40, 255),
-                TileType.Mountain => new Color(30, 30, 35, 255),
-                TileType.Field => new Color(40, 35, 20, 255),
-                TileType.Road => new Color(40, 40, 40, 255),
-                _ => new Color(20, 20, 20, 255)
+                // LIGHTENED for better visual clarity (sprites pop more)
+                TileType.Grass => new Color(35, 50, 35, 255),      // Was: (20, 40, 20)
+                TileType.Forest => new Color(25, 40, 25, 255),     // Was: (10, 30, 10)
+                TileType.Water => new Color(20, 35, 50, 255),      // Was: (10, 20, 40)
+                TileType.Mountain => new Color(40, 40, 45, 255),   // Was: (30, 30, 35)
+                TileType.Field => new Color(50, 45, 30, 255),      // Was: (40, 35, 20)
+                TileType.Road => new Color(50, 50, 50, 255),       // Was: (40, 40, 40)
+                _ => new Color(30, 30, 30, 255)                    // Was: (20, 20, 20)
             };
         }
 
@@ -448,11 +456,191 @@ namespace VillageBuilder.Game.Graphics.UI
                         {
                             var taskColor = new Color(255, 255, 0, 255);
                             Raylib.DrawRectangle((int)pos.X, (int)pos.Y, 3, 3, taskColor);
+                                        }
+                                    }
+                                }
+
+                        private void RenderWildlife(GameEngine engine, int tileSize, int minX, int maxX, int minY, int maxY, VillageBuilder.Game.Core.SelectionManager? selectionManager)
+                        {
+                            if (engine.WildlifeManager == null) return;
+
+                            foreach (var wildlife in engine.WildlifeManager.Wildlife.Where(w => w.IsAlive))
+                            {
+                                int posX = wildlife.Position.X;
+                                int posY = wildlife.Position.Y;
+
+                                // Only render if in visible area
+                                if (posX < minX || posX >= maxX || posY < minY || posY >= maxY)
+                                    continue;
+
+                                var pos = new Vector2(posX * tileSize, posY * tileSize);
+
+                                // Get color based on animal type
+                                var bgColor = GetWildlifeColor(wildlife.Type, wildlife.IsPredator);
+
+                                // Dim color if fleeing
+                                if (wildlife.CurrentBehavior == WildlifeBehavior.Fleeing)
+                                {
+                                    bgColor = new Color(
+                                        (byte)(bgColor.R * 0.7f),
+                                        (byte)(bgColor.G * 0.7f),
+                                        (byte)(bgColor.B * 0.7f),
+                                        bgColor.A
+                                    );
+                                }
+
+                                // Check if we'll use sprite rendering
+                                var spriteType = GetWildlifeSpriteType(wildlife.Type);
+                                bool willUseSprite = spriteType.HasValue && 
+                                                    GraphicsConfig.UseSpriteMode && 
+                                                    SpriteAtlasManager.Instance.GetSprite(spriteType.Value).HasValue;
+
+                                // Only draw background rectangle if NOT using sprites (for text fallback)
+                                if (!willUseSprite)
+                                {
+                                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, tileSize, tileSize, bgColor);
+                                }
+
+                                // Draw selection indicator if selected
+                                bool isSelected = selectionManager?.SelectedWildlife == wildlife;
+                                if (isSelected)
+                                {
+                                    Raylib.DrawRectangleLines((int)pos.X, (int)pos.Y, tileSize, tileSize, new Color(255, 255, 0, 255));
+                                    Raylib.DrawRectangleLines((int)pos.X + 1, (int)pos.Y + 1, tileSize - 2, tileSize - 2, new Color(255, 255, 0, 255));
+                                }
+
+                                // Draw wildlife emoji/glyph
+                                string glyph = GetWildlifeGlyph(wildlife.Type);
+                                var glyphColor = new Color(255, 255, 255, 255);
+
+                                int textX = (int)pos.X + (tileSize - FontSize) / 2;
+                                int textY = (int)pos.Y + (tileSize - FontSize) / 2;
+
+                                // Use sprite if available, otherwise fall back to text
+                                if (spriteType.HasValue && GraphicsConfig.UseSpriteMode)
+                                {
+                                    var sprite = SpriteAtlasManager.Instance.GetSprite(spriteType.Value);
+                                    if (sprite.HasValue)
+                                    {
+                                        // Render wildlife sprite WITH TRANSPARENCY
+                                        int spriteSize = (int)(tileSize * 0.8f);
+                                        int spriteX = (int)pos.X + (tileSize - spriteSize) / 2;
+                                        int spriteY = (int)pos.Y + (tileSize - spriteSize) / 2;
+
+                                        var sourceRect = new Rectangle(0, 0, sprite.Value.Width, sprite.Value.Height);
+                                        var destRect = new Rectangle(spriteX, spriteY, spriteSize, spriteSize);
+                                        var origin = new System.Numerics.Vector2(0, 0);
+
+                                        // Use White color to preserve sprite's original colors and transparency
+                                        Raylib.DrawTexturePro(sprite.Value, sourceRect, destRect, origin, 0f, Color.White);
+                                        }
+                                        else
+                                        {
+                                            // Fallback to text rendering with emoji font support
+                                            GraphicsConfig.DrawConsoleTextAuto(glyph, textX, textY, FontSize, glyphColor);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // Text-only mode - use auto font selection for emoji support
+                                        GraphicsConfig.DrawConsoleTextAuto(glyph, textX, textY, FontSize, glyphColor);
+                                    }
+
+                                // Draw health bar if injured
+                                if (wildlife.Health < 100)
+                                {
+                                    int barWidth = tileSize - 4;
+                                    int barHeight = 3;
+                                    int barX = (int)pos.X + 2;
+                                    int barY = (int)pos.Y + tileSize - 5;
+
+                                    // Background
+                                    Raylib.DrawRectangle(barX, barY, barWidth, barHeight, new Color(60, 0, 0, 200));
+
+                                    // Health
+                                    int healthWidth = (int)(barWidth * (wildlife.Health / 100f));
+                                    Color healthColor = wildlife.Health > 50 ? new Color(0, 200, 0, 255) : new Color(200, 0, 0, 255);
+                                    Raylib.DrawRectangle(barX, barY, healthWidth, barHeight, healthColor);
+                                }
+
+                                // Draw behavior indicator for hunting/fleeing
+                                if (wildlife.CurrentBehavior == WildlifeBehavior.Hunting)
+                                {
+                                    // Red dot for hunting
+                                    Raylib.DrawCircle((int)pos.X + tileSize - 5, (int)pos.Y + 5, 3, new Color(255, 0, 0, 255));
+                                }
+                                else if (wildlife.CurrentBehavior == WildlifeBehavior.Fleeing)
+                                {
+                                    // Yellow dot for fleeing
+                                    Raylib.DrawCircle((int)pos.X + tileSize - 5, (int)pos.Y + 5, 3, new Color(255, 255, 0, 255));
+                                }
+                            }
                         }
-                    }
-                }
-        
-        private void DrawBuildingSelection(Building building, int tileSize)
+
+                        private Color GetWildlifeColor(WildlifeType type, bool isPredator)
+                        {
+                            if (isPredator)
+                            {
+                                return type switch
+                                {
+                                    WildlifeType.Wolf => new Color(100, 100, 120, 220),     // Gray
+                                    WildlifeType.Fox => new Color(180, 90, 40, 220),        // Orange-brown
+                                    WildlifeType.Bear => new Color(80, 60, 40, 220),        // Dark brown
+                                    _ => new Color(120, 80, 60, 220)
+                                };
+                            }
+                            else
+                            {
+                                return type switch
+                                {
+                                    WildlifeType.Rabbit => new Color(200, 180, 160, 220),  // Light brown
+                                    WildlifeType.Deer => new Color(160, 120, 80, 220),     // Brown
+                                    WildlifeType.Boar => new Color(100, 80, 70, 220),      // Dark brown
+                                    WildlifeType.Bird => new Color(140, 180, 200, 220),    // Light blue
+                                    WildlifeType.Duck => new Color(120, 160, 140, 220),    // Green-blue
+                                    WildlifeType.Turkey => new Color(140, 100, 80, 220),   // Brown-red
+                                    _ => new Color(150, 150, 150, 220)
+                                };
+                            }
+                        }
+
+                        private string GetWildlifeGlyph(WildlifeType type)
+                        {
+                            return type switch
+                            {
+                                WildlifeType.Rabbit => "🐰",
+                                WildlifeType.Deer => "🦌",
+                                WildlifeType.Boar => "🐗",
+                                WildlifeType.Wolf => "🐺",
+                                WildlifeType.Fox => "🦊",
+                                WildlifeType.Bear => "🐻",
+                                WildlifeType.Bird => "🐦",
+                                WildlifeType.Duck => "🦆",
+                                WildlifeType.Turkey => "🦃",
+                                _ => "?"
+                            };
+                        }
+
+                        private VillageBuilder.Engine.World.DecorationType? GetWildlifeSpriteType(WildlifeType type)
+                        {
+                            return type switch
+                            {
+                                WildlifeType.Rabbit => VillageBuilder.Engine.World.DecorationType.RabbitSmall,
+                                WildlifeType.Deer => VillageBuilder.Engine.World.DecorationType.DeerGrazing,
+                                WildlifeType.Bird => VillageBuilder.Engine.World.DecorationType.BirdFlying,
+                                WildlifeType.Duck => VillageBuilder.Engine.World.DecorationType.BirdPerched,
+                                WildlifeType.Turkey => VillageBuilder.Engine.World.DecorationType.BirdPerched,
+                                // NEW: Predators with dedicated sprites
+                                WildlifeType.Fox => VillageBuilder.Engine.World.DecorationType.FoxHunting,
+                                WildlifeType.Wolf => VillageBuilder.Engine.World.DecorationType.WolfPack,
+                                WildlifeType.Bear => VillageBuilder.Engine.World.DecorationType.BearGrizzly,
+                                WildlifeType.Boar => VillageBuilder.Engine.World.DecorationType.BoarWild,
+                                // For any future animals without sprites, return null to use text fallback
+                                _ => null
+                            };
+                        }
+
+                        private void DrawBuildingSelection(Building building, int tileSize)
         {
             var tiles = building.GetOccupiedTiles();
             foreach (var tile in tiles)
@@ -535,6 +723,12 @@ namespace VillageBuilder.Game.Graphics.UI
 
                 foreach (var decoration in tile.Decorations)
                 {
+                    // SKIP static animal decorations - these are now rendered as live wildlife entities
+                    if (IsAnimalDecoration(decoration.Type))
+                    {
+                        continue;
+                    }
+
                     // Get decoration color
                     var decorColor = decoration.GetColor(seasonIndex, timeOfDay);
 
@@ -582,25 +776,42 @@ namespace VillageBuilder.Game.Graphics.UI
                             int spriteX = (int)pos.X + (size - spriteSize) / 2 + offsetX;
                             int spriteY = (int)pos.Y + (size - spriteSize) / 2 + offsetY;
 
-                            var sourceRect = new Rectangle(0, 0, sprite.Value.Width, sprite.Value.Height);
-                            var destRect = new Rectangle(spriteX, spriteY, spriteSize, spriteSize);
-                            var origin = new System.Numerics.Vector2(0, 0);
+                                    var sourceRect = new Rectangle(0, 0, sprite.Value.Width, sprite.Value.Height);
+                                    var destRect = new Rectangle(spriteX, spriteY, spriteSize, spriteSize);
+                                    var origin = new System.Numerics.Vector2(0, 0);
 
-                            // Render sprite with color tinting (for day/night and seasonal effects)
-                            Raylib.DrawTexturePro(sprite.Value, sourceRect, destRect, origin, 0f, color);
-                            continue; // Skip text rendering
-                        }
-                    }
+                                    // Render sprite WITHOUT color tinting - Twemoji sprites are already colored!
+                                    // Use Color.White to preserve the sprite's original colors
+                                    Raylib.DrawTexturePro(sprite.Value, sourceRect, destRect, origin, 0f, Color.White);
+                                    continue; // Skip text rendering
+                                }
+                            }
 
-                    // FALLBACK: Text-based rendering (ASCII symbols)
+                            // FALLBACK: Text-based rendering (ASCII symbols)
                     // Used when sprite mode is disabled or sprite not available
                     string glyph = decoration.GetGlyph();
                     int textX = (int)pos.X + (size - FontSize) / 2 + offsetX;
                     int textY = (int)pos.Y + (size - FontSize) / 2 + offsetY;
 
-                    // Render decoration with automatic font selection (emoji font for emojis)
-                    GraphicsConfig.DrawConsoleTextAuto(glyph, textX, textY, FontSize, color);
-                }
-            }
-    }
-}
+                                        // Render decoration with automatic font selection (emoji font for emojis)
+                                        GraphicsConfig.DrawConsoleTextAuto(glyph, textX, textY, FontSize, color);
+                                    }
+                                }
+
+                                    /// <summary>
+                                    /// Check if a decoration type represents an animal (which should be rendered as wildlife entities instead)
+                                    /// </summary>
+                                    private bool IsAnimalDecoration(VillageBuilder.Engine.World.DecorationType type)
+                                    {
+                                        return type == VillageBuilder.Engine.World.DecorationType.RabbitSmall ||
+                                               type == VillageBuilder.Engine.World.DecorationType.DeerGrazing ||
+                                               type == VillageBuilder.Engine.World.DecorationType.FishInWater ||
+                                               type == VillageBuilder.Engine.World.DecorationType.BirdFlying ||
+                                               type == VillageBuilder.Engine.World.DecorationType.BirdPerched ||
+                                               type == VillageBuilder.Engine.World.DecorationType.FoxHunting ||
+                                               type == VillageBuilder.Engine.World.DecorationType.WolfPack ||
+                                               type == VillageBuilder.Engine.World.DecorationType.BearGrizzly ||
+                                               type == VillageBuilder.Engine.World.DecorationType.BoarWild;
+                                    }
+                                }
+                            }

@@ -35,6 +35,11 @@ $emojiList = @{
     "1f430.png" = "?? Rabbit"
     "1f98c.png" = "?? Deer"
     "1f41f.png" = "?? Fish"
+    # NEW: Predator and wildlife sprites
+    "1f98a.png" = "?? Fox"
+    "1f43a.png" = "?? Wolf"
+    "1f43b.png" = "?? Bear"
+    "1f417.png" = "?? Boar"
 }
 
 Write-Host "Downloading $($emojiList.Count) emoji sprites from Twemoji CDN..." -ForegroundColor Yellow

@@ -1,7 +1,9 @@
 ﻿using VillageBuilder.Engine.Buildings;
 using VillageBuilder.Engine.Commands;
 using VillageBuilder.Engine.Entities;
+using VillageBuilder.Engine.Entities.Wildlife;
 using VillageBuilder.Engine.Resources;
+using VillageBuilder.Engine.Systems;
 using VillageBuilder.Engine.World;
 using VillageBuilder.Engine.Core;
 
@@ -18,10 +20,12 @@ namespace VillageBuilder.Engine.Core
         public List<Building> Buildings { get; }
         public CommandQueue CommandQueue { get; }
         public GameConfiguration Configuration { get; }
+        public WildlifeManager WildlifeManager { get; }
 
         private int _seed;
         private int _currentTick;
         private int _nextBuildingId = 1;
+        private WildlifeAI _wildlifeAI;
 
         // Track tiles that have people on them for efficient clearing
         private readonly HashSet<(int x, int y)> _occupiedTiles = new HashSet<(int x, int y)>();
@@ -46,14 +50,21 @@ namespace VillageBuilder.Engine.Core
             Time = new GameTime();
             Weather = new Weather(_seed);
             Grid = new VillageGrid(configuration.MapWidth, configuration.MapHeight, _seed);
-            VillageResources = new ResourceInventory();
-            Families = new List<Family>();
-            Buildings = new List<Building>();
-            CommandQueue = new CommandQueue();
-            
-            InitializeStartingResources(configuration);
-            InitializeStartingFamilies();
-        }
+                VillageResources = new ResourceInventory();
+                Families = new List<Family>();
+                Buildings = new List<Building>();
+                CommandQueue = new CommandQueue();
+
+                // Initialize wildlife system
+                WildlifeManager = new WildlifeManager(Grid, _seed);
+                _wildlifeAI = new WildlifeAI(Grid, WildlifeManager, new Random(_seed));
+
+                InitializeStartingResources(configuration);
+                InitializeStartingFamilies();
+
+                // Spawn initial wildlife population
+                WildlifeManager.InitializeWildlife();
+            }
 
         private void InitializeStartingResources(GameConfiguration config)
         {
@@ -307,12 +318,32 @@ namespace VillageBuilder.Engine.Core
                     EventLog.Instance.AddMessage(
                         $"The {family.FamilyName} family ({workers.Count} workers) has arrived at the {building.Type}",
                         LogLevel.Info);
-                }
-            }
+                        }
+                    }
 
-            _currentTick++;
-            return commandResults;
-        }
+                    // Update wildlife system (every tick)
+                    if (WildlifeManager != null && _wildlifeAI != null)
+                    {
+                        // Update all wildlife AI and movement
+                        var allPeople = Families.SelectMany(f => f.Members).ToList();
+                        foreach (var wildlife in WildlifeManager.Wildlife.Where(w => w.IsAlive))
+                        {
+                            _wildlifeAI.UpdateWildlifeAI(wildlife, allPeople);
+                        }
+
+                        // Update wildlife stats and tile registrations
+                        WildlifeManager.UpdateWildlife();
+
+                        // Balance ecosystem periodically (every hour)
+                        if (hourPassed)
+                        {
+                            WildlifeManager.BalanceEcosystem();
+                        }
+                    }
+
+                    _currentTick++;
+                    return commandResults;
+                }
 
         private void ConsumeResources()
         {

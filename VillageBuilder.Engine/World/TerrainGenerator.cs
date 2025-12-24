@@ -359,8 +359,8 @@ namespace VillageBuilder.Engine.World
 
                 private void PlaceGrassDecorations(Tile tile, float height, float moisture)
                 {
-                    // Grass tufts (common)
-                    if (_random.NextDouble() < 0.3)
+                    // Grass tufts (REDUCED for visual clarity: 30% → 8%)
+                    if (_random.NextDouble() < 0.08)
                     {
                         tile.Decorations.Add(new TerrainDecoration(
                             DecorationType.GrassTuft, 
@@ -370,8 +370,8 @@ namespace VillageBuilder.Engine.World
                         ));
                     }
 
-                    // Wildflowers (less common, more in moist areas)
-                    if (moisture > 0.5f && _random.NextDouble() < 0.15)
+                    // Wildflowers (REDUCED for visual clarity: 15% → 5%)
+                    if (moisture > 0.5f && _random.NextDouble() < 0.05)
                     {
                         tile.Decorations.Add(new TerrainDecoration(
                             DecorationType.FlowerWild, 
@@ -406,8 +406,8 @@ namespace VillageBuilder.Engine.World
                         ));
                     }
 
-                    // Occasional rocks
-                    if (_random.NextDouble() < 0.05)
+                    // Occasional rocks (REDUCED for visual clarity: 5% → 2%)
+                    if (_random.NextDouble() < 0.02)
                     {
                         var rockType = _random.NextDouble() < 0.3 
                             ? DecorationType.RockBoulder 
@@ -420,8 +420,8 @@ namespace VillageBuilder.Engine.World
                         ));
                     }
 
-                    // Tall grass patches
-                    if (moisture > 0.6f && _random.NextDouble() < 0.12)
+                    // Tall grass patches (REDUCED for visual clarity: 12% → 4%)
+                    if (moisture > 0.6f && _random.NextDouble() < 0.04)
                     {
                         tile.Decorations.Add(new TerrainDecoration(
                             DecorationType.TallGrass, 

@@ -16,6 +16,7 @@ namespace VillageBuilder.Engine.Entities
         WorkingAtBuilding,
         Constructing,
         Gathering,
+        Hunting,           // NEW: Hunting wildlife
         MovingToLocation,
         Resting,
         Sleeping,

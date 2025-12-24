@@ -107,6 +107,11 @@ namespace VillageBuilder.Game.Graphics
                 _spriteFilePaths[DecorationType.RabbitSmall] = "1f430.png";       // ?? rabbit face
                 _spriteFilePaths[DecorationType.DeerGrazing] = "1f98c.png";       // ?? deer
                 _spriteFilePaths[DecorationType.FishInWater] = "1f41f.png";       // ?? fish
+                // NEW: Predators and other wildlife
+                _spriteFilePaths[DecorationType.FoxHunting] = "1f98a.png";        // ?? fox
+                _spriteFilePaths[DecorationType.WolfPack] = "1f43a.png";          // ?? wolf
+                _spriteFilePaths[DecorationType.BearGrizzly] = "1f43b.png";       // ?? bear
+                _spriteFilePaths[DecorationType.BoarWild] = "1f417.png";          // ?? boar
 
                 // UI Icon mappings (stored in assets/sprites/ui_icons/)
                 _uiIconFilePaths[UIIconType.Wood] = "1fab5.png";          // ?? wood
@@ -150,9 +155,13 @@ namespace VillageBuilder.Game.Graphics
             if (_spritesLoaded) return;
 
             string spriteDir = "Assets/sprites/emojis/";
+            string absolutePath = Path.GetFullPath(spriteDir);
 
             Console.WriteLine("=== Emoji Sprite Loading ===");
+            Console.WriteLine($"Working Directory: {Directory.GetCurrentDirectory()}");
             Console.WriteLine($"Loading emoji sprites from: {spriteDir}");
+            Console.WriteLine($"Absolute path: {absolutePath}");
+            Console.WriteLine($"Directory exists: {Directory.Exists(absolutePath)}");
 
             int loadedCount = 0;
             int failedCount = 0;
@@ -168,12 +177,21 @@ namespace VillageBuilder.Game.Graphics
                     try
                     {
                         var texture = Raylib.LoadTexture(fullPath);
-                        
+
                         // Set point filter for crisp pixel-perfect rendering
                         Raylib.SetTextureFilter(texture, TextureFilter.Point);
-                        
+
                         _sprites[decorationType] = texture;
                         loadedCount++;
+
+                        // Log successful wildlife sprite loads
+                        if (decorationType == DecorationType.FoxHunting || 
+                            decorationType == DecorationType.WolfPack || 
+                            decorationType == DecorationType.BearGrizzly || 
+                            decorationType == DecorationType.BoarWild)
+                        {
+                            Console.WriteLine($"  ? Loaded {decorationType}: {filename} (ID: {texture.Id}, Size: {texture.Width}x{texture.Height})");
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -183,6 +201,14 @@ namespace VillageBuilder.Game.Graphics
                 }
                 else
                 {
+                    // Log missing wildlife sprites specifically
+                    if (decorationType == DecorationType.FoxHunting || 
+                        decorationType == DecorationType.WolfPack || 
+                        decorationType == DecorationType.BearGrizzly || 
+                        decorationType == DecorationType.BoarWild)
+                    {
+                        Console.WriteLine($"  ? MISSING {decorationType}: {fullPath}");
+                    }
                     failedCount++;
                 }
             }
@@ -194,7 +220,15 @@ namespace VillageBuilder.Game.Graphics
                 Console.WriteLine($"? Loaded {loadedCount} emoji sprites successfully!");
                 Console.WriteLine($"  Sprite mode: ENABLED");
                 Console.WriteLine($"  Terrain will render with colorful emoji sprites");
-                
+
+                // Verify predator sprites specifically
+                Console.WriteLine("");
+                Console.WriteLine("Predator Sprite Check:");
+                Console.WriteLine($"  Fox (FoxHunting): {(HasSprite(DecorationType.FoxHunting) ? "? LOADED" : "? MISSING")}");
+                Console.WriteLine($"  Wolf (WolfPack): {(HasSprite(DecorationType.WolfPack) ? "? LOADED" : "? MISSING")}");
+                Console.WriteLine($"  Bear (BearGrizzly): {(HasSprite(DecorationType.BearGrizzly) ? "? LOADED" : "? MISSING")}");
+                Console.WriteLine($"  Boar (BoarWild): {(HasSprite(DecorationType.BoarWild) ? "? LOADED" : "? MISSING")}");
+
                 if (failedCount > 0)
                 {
                     Console.WriteLine($"  ? {failedCount} sprites missing (will use ASCII fallback)");

@@ -93,12 +93,16 @@ namespace VillageBuilder.Engine.World
                     DecorationType.BirdFlying => "v",
                     DecorationType.BirdPerched => "^",
                     DecorationType.Butterfly => "*",
-                    DecorationType.RabbitSmall => "r",
-                    DecorationType.DeerGrazing => "d",
-                    DecorationType.FishInWater => "f",
-                    _ => "·"
-                };
-            }
+                            DecorationType.RabbitSmall => "r",
+                            DecorationType.DeerGrazing => "d",
+                            DecorationType.FishInWater => "f",
+                            DecorationType.FoxHunting => "x",
+                            DecorationType.WolfPack => "w",
+                            DecorationType.BearGrizzly => "B",
+                            DecorationType.BoarWild => "b",
+                            _ => "·"
+                        };
+                    }
 
             // Full Unicode/Emoji mode
             return Type switch
@@ -185,14 +189,18 @@ namespace VillageBuilder.Engine.World
                     0 => "??",
                     1 => "?",
                     _ => "*"
-                },
-                DecorationType.RabbitSmall => "??",
-                DecorationType.DeerGrazing => "??",
-                DecorationType.FishInWater => "??",
+                        },
+                        DecorationType.RabbitSmall => "??",
+                        DecorationType.DeerGrazing => "??",
+                        DecorationType.FishInWater => "??",
+                        DecorationType.FoxHunting => "??",
+                        DecorationType.WolfPack => "??",
+                        DecorationType.BearGrizzly => "??",
+                        DecorationType.BoarWild => "??",
 
-                _ => "?"
-            };
-        }
+                        _ => "?"
+                    };
+                }
 
         /// <summary>
         /// Get color for this decoration (can vary by season, time, etc.)
@@ -316,12 +324,17 @@ namespace VillageBuilder.Engine.World
         LogFallen,
         Mushroom,
         
-        // Wildlife (visual only, moves)
-        BirdFlying,
-        BirdPerched,
-        Butterfly,
-        RabbitSmall,
-        DeerGrazing,
-        FishInWater
-    }
-}
+                // Wildlife (visual only, moves)
+                BirdFlying,
+                BirdPerched,
+                Butterfly,
+                RabbitSmall,
+                DeerGrazing,
+                FishInWater,
+                // NEW: Predators and other wildlife
+                FoxHunting,
+                WolfPack,
+                BearGrizzly,
+                BoarWild
+            }
+        }
