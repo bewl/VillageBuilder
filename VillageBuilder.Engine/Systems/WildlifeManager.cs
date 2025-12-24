@@ -1,6 +1,7 @@
 using VillageBuilder.Engine.Buildings;
 using VillageBuilder.Engine.Entities.Wildlife;
 using VillageBuilder.Engine.World;
+using VillageBuilder.Engine.Config;  // Phase 1: Add Config namespace
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,23 +17,25 @@ namespace VillageBuilder.Engine.Systems
         private int _nextWildlifeId = 1;
         private Random _random;
         private VillageGrid _grid;
-        
+        private WildlifeConfig _config;  // Phase 1: Store config
+
         // Population limits and balance
         private const int MAX_WILDLIFE = 150;
         private const int MIN_PREY_POPULATION = 20;
         private const int MAX_PREDATOR_RATIO = 5; // 1 predator per 5 prey
-        
+
         // Tracking tiles with wildlife for efficient clearing
         private readonly HashSet<(int x, int y)> _wildlifeOccupiedTiles = new HashSet<(int x, int y)>();
-        
+
         public List<WildlifeEntity> Wildlife => _wildlife;
         public int WildlifeCount => _wildlife.Count(w => w.IsAlive);
-        
-        public WildlifeManager(VillageGrid grid, int seed)
+
+        public WildlifeManager(VillageGrid grid, int seed, WildlifeConfig? config = null)  // Phase 1: Accept config parameter
         {
             _wildlife = new List<WildlifeEntity>();
             _grid = grid;
             _random = new Random(seed);
+            _config = config ?? GameConfig.Instance.Wildlife;  // Phase 1: Use provided config or default
         }
         
         /// <summary>
@@ -40,64 +43,31 @@ namespace VillageBuilder.Engine.Systems
         /// </summary>
         public void InitializeWildlife()
         {
-            SpawnInitialPrey();
-            SpawnInitialPredators();
+            // Phase 1: Use config-driven initialization
+            foreach (var kvp in _config.InitialPopulation)
+            {
+                var wildlifeType = kvp.Key;
+                var count = kvp.Value;
+
+                for (int i = 0; i < count; i++)
+                {
+                    SpawnWildlife(wildlifeType);
+                }
+            }
         }
-        
+
+        // Phase 1: Remove old hardcoded spawn methods (replaced by config-driven approach above)
+        // Keeping method signatures for backward compatibility if needed elsewhere
         private void SpawnInitialPrey()
         {
-            // Rabbits - common, fast breeding
-            for (int i = 0; i < 30; i++)
-            {
-                SpawnWildlife(WildlifeType.Rabbit);
-            }
-            
-            // Deer - moderate population
-            for (int i = 0; i < 15; i++)
-            {
-                SpawnWildlife(WildlifeType.Deer);
-            }
-            
-            // Boar - less common
-            for (int i = 0; i < 8; i++)
-            {
-                SpawnWildlife(WildlifeType.Boar);
-            }
-            
-            // Birds - common in grasslands
-            for (int i = 0; i < 20; i++)
-            {
-                SpawnWildlife(WildlifeType.Bird);
-            }
-            
-            // Ducks and Turkeys - less common
-            for (int i = 0; i < 10; i++)
-            {
-                SpawnWildlife(_random.Next(2) == 0 ? WildlifeType.Duck : WildlifeType.Turkey);
-            }
+            // Deprecated - now using config-driven initialization
         }
-        
+
         private void SpawnInitialPredators()
         {
-            // Foxes - moderate predator
-            for (int i = 0; i < 5; i++)
-            {
-                SpawnWildlife(WildlifeType.Fox);
-            }
-            
-            // Wolves - pack hunters
-            for (int i = 0; i < 3; i++)
-            {
-                SpawnWildlife(WildlifeType.Wolf);
-            }
-            
-            // Bears - apex predators, rare
-            for (int i = 0; i < 2; i++)
-            {
-                SpawnWildlife(WildlifeType.Bear);
-            }
+            // Deprecated - now using config-driven initialization
         }
-        
+
         /// <summary>
         /// Spawn a new wildlife entity at a suitable location
         /// </summary>

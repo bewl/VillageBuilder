@@ -1,9 +1,13 @@
 ﻿using VillageBuilder.Engine.Core;
+using VillageBuilder.Engine.Config;  // Phase 1: Add Config namespace
 using VillageBuilder.Game.Graphics;
 using VillageBuilder.Game.UI.ViewModels;
 using VillageBuilder.Game.Core.Services;
 using VillageBuilder.Game.Core;
 using VillageBuilder.Game.Graphics.UI;
+
+// Phase 1: Load or create game configuration
+var gameConfig = GameConfig.LoadOrDefault("game_config.json");
 
 var config = new GameConfiguration
 {

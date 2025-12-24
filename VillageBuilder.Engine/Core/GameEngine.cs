@@ -6,6 +6,7 @@ using VillageBuilder.Engine.Resources;
 using VillageBuilder.Engine.Systems;
 using VillageBuilder.Engine.World;
 using VillageBuilder.Engine.Core;
+using VillageBuilder.Engine.Config;  // Phase 1: Add Config namespace
 
 namespace VillageBuilder.Engine.Core
 {
@@ -55,8 +56,9 @@ namespace VillageBuilder.Engine.Core
                 Buildings = new List<Building>();
                 CommandQueue = new CommandQueue();
 
-                // Initialize wildlife system
-                WildlifeManager = new WildlifeManager(Grid, _seed);
+                // Phase 1: Initialize wildlife system with config
+                var wildlifeConfig = GameConfig.Instance.Wildlife;
+                WildlifeManager = new WildlifeManager(Grid, _seed, wildlifeConfig);
                 _wildlifeAI = new WildlifeAI(Grid, WildlifeManager, new Random(_seed));
 
                 InitializeStartingResources(configuration);

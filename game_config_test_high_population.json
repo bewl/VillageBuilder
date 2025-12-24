@@ -1,0 +1,71 @@
+{
+  "Terrain": {
+    "GrassTuftDensity": 0.05,
+    "FlowerDensity": 0.03,
+    "RockDensity": 0.01,
+    "TreeDensity": 0.04,
+    "GlobalDecorationMultiplier": 2.0
+  },
+  "Wildlife": {
+    "InitialPopulation": {
+      "Rabbit": 50,
+      "Deer": 25,
+      "Boar": 15,
+      "Bird": 30,
+      "Duck": 10,
+      "Turkey": 10,
+      "Fox": 10,
+      "Wolf": 8,
+      "Bear": 5
+    },
+    "MaxPopulationPerType": 80,
+    "MaxTotalPopulation": 300,
+    "PopulationCullThreshold": 0.9,
+    "BaseHuntingSuccessRate": 0.5,
+    "HuntingDamagePerAttempt": 30.0,
+    "FleeSpeedMultiplier": 2.0,
+    "MinGrazingTime": 3,
+    "MaxGrazingTime": 10,
+    "MinRestingTime": 5,
+    "MaxRestingTime": 20,
+    "MinWanderingTime": 2,
+    "MaxWanderingTime": 8,
+    "HungerThreshold": 60,
+    "StarvationThreshold": 90,
+    "EnergyThreshold": 25,
+    "FearThreshold": 40,
+    "HungerIncreasePerTick": 0.15,
+    "EnergyDecreasePerTick": 0.12,
+    "HealthRegenerationPerTick": 1.0,
+    "FearDecreasePerTick": 3.0
+  },
+  "Simulation": {
+    "TicksPerDay": 100,
+    "StartingYear": 1,
+    "StartingSeason": "Spring",
+    "StartingDay": 1,
+    "EnableWeather": true,
+    "EnableDayNightCycle": true,
+    "DefaultTimeScale": 1.0,
+    "MaxTimeScale": 10.0,
+    "MinTimeScale": 0.1
+  },
+  "Rendering": {
+    "DefaultBackgroundColor": {
+      "R": 20,
+      "G": 25,
+      "B": 30,
+      "A": 255
+    },
+    "SelectedEntityHighlightColor": {
+      "R": 255,
+      "G": 255,
+      "B": 0,
+      "A": 255
+    },
+    "DaytimeAmbientBrightness": 1.0,
+    "NighttimeAmbientBrightness": 0.3,
+    "SunriseHour": 6.0,
+    "SunsetHour": 18.0
+  }
+}
