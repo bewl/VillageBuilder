@@ -38,8 +38,9 @@ namespace VillageBuilder.Game.Graphics.Rendering
         
         /// <summary>
         /// Selection manager for highlighting selected entities
+        /// Phase 4: Updated to use SelectionCoordinator
         /// </summary>
-        public SelectionManager? SelectionManager { get; set; }
+        public VillageBuilder.Game.Core.Selection.SelectionCoordinator? SelectionManager { get; set; }
         
         /// <summary>
         /// Current zoom level (from camera)
@@ -63,12 +64,13 @@ namespace VillageBuilder.Game.Graphics.Rendering
         
         /// <summary>
         /// Create a render context from game state
+        /// Phase 4: Updated to use SelectionCoordinator
         /// </summary>
         public static RenderContext Create(
             GameEngine engine,
             Camera2D camera,
             int tileSize,
-            SelectionManager? selectionManager = null)
+            VillageBuilder.Game.Core.Selection.SelectionCoordinator? selectionManager = null)
         {
             var screenWidth = GraphicsConfig.ScreenWidth;
             var screenHeight = GraphicsConfig.ScreenHeight;
