@@ -200,6 +200,12 @@ namespace VillageBuilder.Game.Graphics
             codepoints[idx++] = 0x21D2; // ⇒ (rightwards double arrow)
             codepoints[idx++] = 0x279C; // ➜ (heavy round-tipped rightwards arrow)
 
+            // Modern UI symbols (for sidebar)
+            codepoints[idx++] = 0x25B8; // ▸ (black right-pointing small triangle)
+            codepoints[idx++] = 0x25B6; // ▶ (black right-pointing triangle)
+            codepoints[idx++] = 0x2501; // ━ (box drawings heavy horizontal)
+            codepoints[idx++] = 0x2500; // ─ (box drawings light horizontal) - already added above but ensure
+
             // Emojis (if supported by font)
             codepoints[idx++] = 0x1F3E0; // 🏠 (house)
             codepoints[idx++] = 0x1F528; // 🔨 (hammer)
@@ -485,6 +491,9 @@ namespace VillageBuilder.Game.Graphics
 
                                 System.Console.WriteLine("⚠ Sprite mode disabled - using ASCII fallback");
                             }
+
+                            // NEW: Load UI icon sprites
+                            SpriteAtlasManager.Instance.LoadUIIcons();
                         }
                         catch (Exception ex)
                         {
@@ -681,11 +690,83 @@ namespace VillageBuilder.Game.Graphics
             return codepoint >= 0x1F300 || (codepoint >= 0x2600 && codepoint <= 0x26FF);
         }
 
-        // Add helper method for measuring text correctly
-        public static int MeasureText(string text, int fontSize)
-        {
-            var measured = Raylib.MeasureTextEx(ConsoleFont, text, fontSize, 2.0f);
-            return (int)measured.X;
-        }
-    }
-}
+                // Add helper method for measuring text correctly
+                public static int MeasureText(string text, int fontSize)
+                {
+                    var measured = Raylib.MeasureTextEx(ConsoleFont, text, fontSize, 2.0f);
+                    return (int)measured.X;
+                }
+
+                        /// <summary>
+                        /// Draw a UI icon as a sprite with ASCII fallback
+                        /// </summary>
+                        /// <param name="iconType">The UI icon type to render</param>
+                        /// <param name="x">X position</param>
+                        /// <param name="y">Y position</param>
+                        /// <param name="size">Size in pixels</param>
+                        /// <param name="color">Color tint for the icon</param>
+                        /// <param name="asciiFallback">ASCII character to use if sprite unavailable</param>
+                        /// <returns>Width of the drawn icon</returns>
+                        public static int DrawUIIcon(UIIconType iconType, int x, int y, int size, Color color, string asciiFallback)
+                        {
+                            // Try sprite rendering first if available
+                            if (SpriteAtlasManager.Instance.UIIconsEnabled)
+                            {
+                                var sprite = SpriteAtlasManager.Instance.GetUIIcon(iconType);
+                                if (sprite.HasValue)
+                                {
+                                    // Render sprite texture
+                                    var sourceRect = new Rectangle(0, 0, sprite.Value.Width, sprite.Value.Height);
+                                    var destRect = new Rectangle(x, y, size, size);
+                                    var origin = new System.Numerics.Vector2(0, 0);
+
+                                    Raylib.DrawTexturePro(sprite.Value, sourceRect, destRect, origin, 0f, color);
+                                    return size;
+                                }
+                            }
+
+                            // Fallback to ASCII rendering
+                            DrawConsoleText(asciiFallback, x, y, size, color);
+                            return MeasureText(asciiFallback, size);
+                        }
+
+                        /// <summary>
+                        /// Draw a repeating UI decoration line (for separators) using sprites or ASCII
+                        /// </summary>
+                        /// <param name="iconType">The line/separator icon type</param>
+                        /// <param name="x">Starting X position</param>
+                        /// <param name="y">Y position</param>
+                        /// <param name="width">Total width to fill</param>
+                        /// <param name="size">Size of each sprite/character</param>
+                        /// <param name="color">Color tint</param>
+                        /// <param name="asciiFallback">ASCII character for fallback</param>
+                        public static void DrawUIDecorationLine(UIIconType iconType, int x, int y, int width, int size, Color color, char asciiFallback)
+                        {
+                            // Try sprite rendering first
+                            if (SpriteAtlasManager.Instance.UIIconsEnabled)
+                            {
+                                var sprite = SpriteAtlasManager.Instance.GetUIIcon(iconType);
+                                if (sprite.HasValue)
+                                {
+                                    // Render repeating sprites to fill width
+                                    int currentX = x;
+                                    while (currentX < x + width)
+                                    {
+                                        var sourceRect = new Rectangle(0, 0, sprite.Value.Width, sprite.Value.Height);
+                                        var destRect = new Rectangle(currentX, y, size, size);
+                                        var origin = new System.Numerics.Vector2(0, 0);
+
+                                        Raylib.DrawTexturePro(sprite.Value, sourceRect, destRect, origin, 0f, color);
+                                        currentX += size;
+                                    }
+                                    return;
+                                }
+                            }
+
+                            // Fallback to ASCII repeating characters
+                            int charCount = Math.Max(0, width / 8);
+                            string line = new string(asciiFallback, charCount);
+                            DrawConsoleText(line, x, y, size, color);
+                        }
+                    }
+                }

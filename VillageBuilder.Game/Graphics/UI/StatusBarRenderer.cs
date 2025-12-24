@@ -144,23 +144,29 @@ namespace VillageBuilder.Game.Graphics.UI
             var resources = engine.VillageResources.GetAll();
             var keyResources = new[]
             {
-                (ResourceType.Wood, "♣", new Color(150, 100, 60, 255)),      // Tree symbol
-                (ResourceType.Stone, "▲", new Color(150, 150, 160, 255)),    // Mountain/stone
-                (ResourceType.Grain, "≡", new Color(200, 180, 100, 255)),    // Grain rows
-                (ResourceType.Tools, "╬", new Color(180, 160, 140, 255)),    // Tools/cross
-                (ResourceType.Firewood, "♠", new Color(255, 150, 50, 255))   // Fire/spade
+                (ResourceType.Wood, UIIconType.Wood, "♣", new Color(150, 100, 60, 255)),
+                (ResourceType.Stone, UIIconType.Stone, "▲", new Color(150, 150, 160, 255)),
+                (ResourceType.Grain, UIIconType.Grain, "≡", new Color(200, 180, 100, 255)),
+                (ResourceType.Tools, UIIconType.Tools, "╬", new Color(180, 160, 140, 255)),
+                (ResourceType.Firewood, UIIconType.Firewood, "♠", new Color(255, 150, 50, 255))
             };
 
             var currentX = x;
-            foreach (var (type, icon, color) in keyResources)
+            foreach (var (type, iconType, asciiFallback, color) in keyResources)
             {
                 var amount = resources.ContainsKey(type) ? resources[type] : 0;
                 var textColor = amount > 0 ? new Color(200, 200, 200, 255) : new Color(80, 80, 80, 255);
-                
-                // Draw icon in color
-                GraphicsConfig.DrawConsoleText(icon, currentX, y, SmallFontSize, amount > 0 ? color : new Color(60, 60, 60, 255));
-                currentX += GraphicsConfig.MeasureText(icon, SmallFontSize) + 5;
-                
+
+                // Draw icon using sprite (with ASCII fallback)
+                currentX += GraphicsConfig.DrawUIIcon(
+                    iconType, 
+                    currentX, y, 
+                    SmallFontSize, 
+                    amount > 0 ? color : new Color(60, 60, 60, 255),
+                    asciiFallback
+                );
+                currentX += 5;
+
                 // Draw amount
                 var amountText = amount.ToString();
                 GraphicsConfig.DrawConsoleText(amountText, currentX, y, SmallFontSize, textColor);
@@ -175,29 +181,53 @@ namespace VillageBuilder.Game.Graphics.UI
             var totalBuildings = engine.Buildings.Count;
             var pendingCommands = engine.CommandQueue.GetPendingCommandCount();
 
-            // Population
-            GraphicsConfig.DrawConsoleText("☺", x, y, SmallFontSize, new Color(255, 200, 150, 255));
-            x += GraphicsConfig.MeasureText("☺", SmallFontSize) + 5;
+            // Population icon
+            x += GraphicsConfig.DrawUIIcon(
+                UIIconType.People,
+                x, y,
+                SmallFontSize,
+                new Color(255, 200, 150, 255),
+                "☺"
+            );
+            x += 5;
             GraphicsConfig.DrawConsoleText($"{totalPopulation}", x, y, SmallFontSize, new Color(200, 200, 200, 255));
-            
-            // Buildings
+
+            // Buildings icon
             x += GraphicsConfig.MeasureText(totalPopulation.ToString(), SmallFontSize) + 25;
-            GraphicsConfig.DrawConsoleText("▓", x, y, SmallFontSize, new Color(150, 150, 150, 255));
-            x += GraphicsConfig.MeasureText("▓", SmallFontSize) + 5;
+            x += GraphicsConfig.DrawUIIcon(
+                UIIconType.Buildings,
+                x, y,
+                SmallFontSize,
+                new Color(150, 150, 150, 255),
+                "▓"
+            );
+            x += 5;
             GraphicsConfig.DrawConsoleText($"{constructedBuildings}/{totalBuildings}", x, y, SmallFontSize, new Color(200, 200, 200, 255));
-            
-            // Pending commands
+
+            // Pending commands icon
             x += GraphicsConfig.MeasureText($"{constructedBuildings}/{totalBuildings}", SmallFontSize) + 25;
             if (pendingCommands > 0)
             {
-                GraphicsConfig.DrawConsoleText("◊", x, y, SmallFontSize, new Color(255, 200, 100, 255));
-                x += GraphicsConfig.MeasureText("◊", SmallFontSize) + 5;
+                x += GraphicsConfig.DrawUIIcon(
+                    UIIconType.Settings,
+                    x, y,
+                    SmallFontSize,
+                    new Color(255, 200, 100, 255),
+                    "◊"
+                );
+                x += 5;
                 GraphicsConfig.DrawConsoleText($"{pendingCommands}", x, y, SmallFontSize, new Color(255, 200, 100, 255));
             }
             else
             {
-                GraphicsConfig.DrawConsoleText("◊", x, y, SmallFontSize, new Color(60, 60, 60, 255));
-                x += GraphicsConfig.MeasureText("◊", SmallFontSize) + 5;
+                x += GraphicsConfig.DrawUIIcon(
+                    UIIconType.Settings,
+                    x, y,
+                    SmallFontSize,
+                    new Color(60, 60, 60, 255),
+                    "◊"
+                );
+                x += 5;
                 GraphicsConfig.DrawConsoleText("0", x, y, SmallFontSize, new Color(100, 100, 100, 255));
             }
         }

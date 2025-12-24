@@ -7,6 +7,49 @@ using VillageBuilder.Engine.World;
 namespace VillageBuilder.Game.Graphics
 {
     /// <summary>
+    /// Types of UI icons available as emoji sprites
+    /// </summary>
+    public enum UIIconType
+    {
+        // Resources
+        Wood,
+        Stone,
+        Grain,
+        Tools,
+        Firewood,
+
+        // People & Buildings
+        People,
+        Buildings,
+        House,
+        Workshop,
+        Mine,
+
+        // Status
+        Save,
+        Construction,
+        Settings,
+        Stats,
+
+        // Activities
+        Sleeping,
+        Walking,
+        Resting,
+        Idle,
+
+        // Log Levels
+        Info,
+        Warning,
+        Error,
+        Success,
+
+        // UI Decorations
+        ArrowRight,
+        ArrowLeft,
+        SeparatorLine
+    }
+
+    /// <summary>
     /// Manages emoji sprite textures for modern terrain decoration rendering.
     /// Provides fast lookup and efficient rendering of emoji sprites as an alternative to ASCII symbols.
     /// </summary>
@@ -17,12 +60,20 @@ namespace VillageBuilder.Game.Graphics
 
         private readonly Dictionary<DecorationType, Texture2D> _sprites = new();
         private readonly Dictionary<DecorationType, string> _spriteFilePaths = new();
+        private readonly Dictionary<UIIconType, Texture2D> _uiIcons = new();
+        private readonly Dictionary<UIIconType, string> _uiIconFilePaths = new();
         private bool _spritesLoaded = false;
+        private bool _uiIconsLoaded = false;
 
         /// <summary>
         /// Check if sprite mode is enabled and sprites are loaded
         /// </summary>
         public bool SpriteModeEnabled => _spritesLoaded && _sprites.Count > 0;
+
+        /// <summary>
+        /// Check if UI icons are loaded and available
+        /// </summary>
+        public bool UIIconsEnabled => _uiIconsLoaded && _uiIcons.Count > 0;
 
         private SpriteAtlasManager()
         {
@@ -51,12 +102,45 @@ namespace VillageBuilder.Game.Graphics
             _spriteFilePaths[DecorationType.Mushroom] = "1f344.png";          // ?? mushroom
 
             _spriteFilePaths[DecorationType.BirdFlying] = "1f426.png";        // ?? bird
-            _spriteFilePaths[DecorationType.BirdPerched] = "1f99c.png";       // ?? parrot
-            _spriteFilePaths[DecorationType.Butterfly] = "1f98b.png";         // ?? butterfly
-            _spriteFilePaths[DecorationType.RabbitSmall] = "1f430.png";       // ?? rabbit face
-            _spriteFilePaths[DecorationType.DeerGrazing] = "1f98c.png";       // ?? deer
-            _spriteFilePaths[DecorationType.FishInWater] = "1f41f.png";       // ?? fish
-        }
+                _spriteFilePaths[DecorationType.BirdPerched] = "1f99c.png";       // ?? parrot
+                _spriteFilePaths[DecorationType.Butterfly] = "1f98b.png";         // ?? butterfly
+                _spriteFilePaths[DecorationType.RabbitSmall] = "1f430.png";       // ?? rabbit face
+                _spriteFilePaths[DecorationType.DeerGrazing] = "1f98c.png";       // ?? deer
+                _spriteFilePaths[DecorationType.FishInWater] = "1f41f.png";       // ?? fish
+
+                // UI Icon mappings (stored in assets/sprites/ui_icons/)
+                _uiIconFilePaths[UIIconType.Wood] = "1fab5.png";          // ?? wood
+                _uiIconFilePaths[UIIconType.Stone] = "1faa8.png";         // ?? rock
+                _uiIconFilePaths[UIIconType.Grain] = "1f33e.png";         // ?? grain
+                _uiIconFilePaths[UIIconType.Tools] = "1f528.png";         // ?? hammer
+                _uiIconFilePaths[UIIconType.Firewood] = "1f525.png";      // ?? fire
+
+                _uiIconFilePaths[UIIconType.People] = "1f465.png";        // ?? people
+                _uiIconFilePaths[UIIconType.Buildings] = "1f3d8.png";     // ??? buildings
+                _uiIconFilePaths[UIIconType.House] = "1f3e0.png";         // ?? house
+                _uiIconFilePaths[UIIconType.Workshop] = "1f3ed.png";      // ?? factory
+                _uiIconFilePaths[UIIconType.Mine] = "26cf.png";           // ?? pickaxe
+
+                _uiIconFilePaths[UIIconType.Save] = "1f4be.png";          // ?? floppy disk
+                _uiIconFilePaths[UIIconType.Construction] = "1f3d7.png";  // ??? construction
+                _uiIconFilePaths[UIIconType.Settings] = "2699.png";       // ?? gear
+                _uiIconFilePaths[UIIconType.Stats] = "1f4ca.png";         // ?? chart
+
+                _uiIconFilePaths[UIIconType.Sleeping] = "1f4a4.png";      // ?? zzz
+                _uiIconFilePaths[UIIconType.Walking] = "1f6b6.png";       // ?? person walking
+                _uiIconFilePaths[UIIconType.Resting] = "1f60c.png";       // ?? relieved face
+                _uiIconFilePaths[UIIconType.Idle] = "1f9cd.png";          // ?? person standing
+
+                    _uiIconFilePaths[UIIconType.Info] = "2139.png";           // ?? information
+                    _uiIconFilePaths[UIIconType.Warning] = "26a0.png";        // ?? warning
+                    _uiIconFilePaths[UIIconType.Error] = "274c.png";          // ? cross mark
+                    _uiIconFilePaths[UIIconType.Success] = "2705.png";        // ? check mark
+
+                    // UI Decorations (arrows, separators)
+                    _uiIconFilePaths[UIIconType.ArrowRight] = "25b6.png";     // ? black right-pointing triangle
+                    _uiIconFilePaths[UIIconType.ArrowLeft] = "25c0.png";      // ? black left-pointing triangle
+                    _uiIconFilePaths[UIIconType.SeparatorLine] = "2796.png";  // ? heavy minus sign
+                }
 
         /// <summary>
         /// Load all emoji sprite textures from disk
@@ -65,8 +149,8 @@ namespace VillageBuilder.Game.Graphics
         {
             if (_spritesLoaded) return;
 
-            string spriteDir = "assets/sprites/emojis/";
-            
+            string spriteDir = "Assets/sprites/emojis/";
+
             Console.WriteLine("=== Emoji Sprite Loading ===");
             Console.WriteLine($"Loading emoji sprites from: {spriteDir}");
 
@@ -161,9 +245,101 @@ namespace VillageBuilder.Game.Graphics
             Console.WriteLine("? Emoji sprites unloaded");
         }
 
-        /// <summary>
-        /// Get the number of loaded sprites
-        /// </summary>
-        public int LoadedSpriteCount => _sprites.Count;
-    }
-}
+                /// <summary>
+                /// Get the number of loaded sprites
+                /// </summary>
+                public int LoadedSpriteCount => _sprites.Count;
+
+                /// <summary>
+                /// Load all UI icon sprites from disk
+                /// </summary>
+                public void LoadUIIcons()
+                {
+                    if (_uiIconsLoaded) return;
+
+                    string iconDir = "Assets/sprites/ui_icons/emojis/";
+
+                    Console.WriteLine("=== UI Icon Sprite Loading ===");
+                    Console.WriteLine($"Loading UI icon sprites from: {iconDir}");
+
+                    int loadedCount = 0;
+                    int failedCount = 0;
+
+                    foreach (var kvp in _uiIconFilePaths)
+                    {
+                        var iconType = kvp.Key;
+                        var filename = kvp.Value;
+                        var fullPath = Path.Combine(iconDir, filename);
+
+                        if (File.Exists(fullPath))
+                        {
+                            try
+                            {
+                                var texture = Raylib.LoadTexture(fullPath);
+
+                                // Set point filter for crisp pixel-perfect rendering
+                                Raylib.SetTextureFilter(texture, TextureFilter.Point);
+
+                                _uiIcons[iconType] = texture;
+                                loadedCount++;
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"  ? Failed to load {filename}: {ex.Message}");
+                                failedCount++;
+                            }
+                        }
+                        else
+                        {
+                            failedCount++;
+                        }
+                    }
+
+                    _uiIconsLoaded = loadedCount > 0;
+
+                    if (_uiIconsLoaded)
+                    {
+                        Console.WriteLine($"? Loaded {loadedCount} UI icon sprites successfully!");
+                        Console.WriteLine($"  UI icon mode: ENABLED");
+                        Console.WriteLine($"  UI will render with colorful emoji icon sprites");
+
+                        if (failedCount > 0)
+                        {
+                            Console.WriteLine($"  ? {failedCount} icons missing (will use ASCII fallback)");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("? No UI icon sprites loaded - using ASCII-only mode");
+                        Console.WriteLine("  To enable UI icons, run: assets/sprites/ui_icons/download_ui_icons.ps1");
+                    }
+
+                    Console.WriteLine("==========================");
+                }
+
+                /// <summary>
+                /// Get UI icon texture (returns null if not loaded)
+                /// </summary>
+                public Texture2D? GetUIIcon(UIIconType type)
+                {
+                    if (_uiIcons.TryGetValue(type, out var texture))
+                    {
+                        return texture;
+                    }
+                    return null;
+                }
+
+                /// <summary>
+                /// Check if a specific UI icon type has a sprite available
+                /// </summary>
+                public bool HasUIIcon(UIIconType type)
+                {
+                    return _uiIcons.ContainsKey(type);
+                }
+
+                /// <summary>
+                /// Get the number of loaded UI icons
+                /// </summary>
+                public int LoadedUIIconCount => _uiIcons.Count;
+            }
+        }

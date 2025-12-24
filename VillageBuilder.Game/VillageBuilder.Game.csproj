@@ -55,9 +55,38 @@
       <None Update="assets\sprites\emojis\1f98b.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
       <None Update="assets\sprites\emojis\1f98c.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
       <None Update="assets\sprites\emojis\1f99c.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
-      <None Update="assets\sprites\emojis\1faa8.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
-      <None Update="assets\sprites\emojis\1fab5.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
-      <None Update="assets\sprites\emojis\1fad0.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
-    </ItemGroup>
+        <None Update="assets\sprites\emojis\1faa8.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="assets\sprites\emojis\1fab5.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="assets\sprites\emojis\1fad0.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+
+        <!-- UI Icon sprites for modern UI rendering -->
+        <None Update="Assets\sprites\ui_icons\emojis\1f33e.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1f3d7.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1f3d8.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1f3e0.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1f3ed.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1f465.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1f4a4.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1f4be.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1f4ca.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1f525.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1f528.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1f60c.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1f6b6.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1f9cd.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1faa8.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\1fab5.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\2139.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\2699.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        <None Update="Assets\sprites\ui_icons\emojis\26a0.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+          <None Update="Assets\sprites\ui_icons\emojis\26cf.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+          <None Update="Assets\sprites\ui_icons\emojis\2705.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+          <None Update="Assets\sprites\ui_icons\emojis\274c.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+
+          <!-- UI Decoration sprites (arrows, separators) -->
+          <None Update="Assets\sprites\ui_icons\emojis\25b6.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+          <None Update="Assets\sprites\ui_icons\emojis\25c0.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+          <None Update="Assets\sprites\ui_icons\emojis\2796.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+        </ItemGroup>
 
 </Project>
