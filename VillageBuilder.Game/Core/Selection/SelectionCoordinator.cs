@@ -31,6 +31,12 @@ namespace VillageBuilder.Game.Core.Selection
         public bool HasMultipleWildlife() => _wildlifeManager.HasMultipleEntities;
         public int SelectedPersonIndex => _personManager.SelectedIndex;
         public int SelectedWildlifeIndex => _wildlifeManager.SelectedIndex;
+
+        // Expose lists for backward compatibility with SidebarRenderer
+        public IReadOnlyList<Person>? PeopleAtSelectedTile => 
+            _personManager.EntitiesAtLocation?.Select(s => s.Person).ToList();
+        public IReadOnlyList<WildlifeEntity>? WildlifeAtSelectedTile => 
+            _wildlifeManager.EntitiesAtLocation?.Select(s => s.Wildlife).ToList();
         
         public SelectionCoordinator()
         {

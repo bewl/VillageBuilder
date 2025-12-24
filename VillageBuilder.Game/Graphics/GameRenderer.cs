@@ -11,6 +11,7 @@ using VillageBuilder.Engine.Entities;
 using VillageBuilder.Engine.Commands.BuildingCommands;
 using VillageBuilder.Game.Graphics.UI;
 using VillageBuilder.Game.Core;
+using VillageBuilder.Game.Core.Selection;
 using System.Numerics;
 
 namespace VillageBuilder.Game.Graphics
@@ -24,7 +25,7 @@ namespace VillageBuilder.Game.Graphics
         private readonly SidebarRenderer _sidebar;
         private readonly ParticleSystem _particleSystem;
         private readonly TooltipRenderer _tooltipRenderer;
-        private readonly SelectionManager _selectionManager;
+        private readonly SelectionCoordinator _selectionManager; // Phase 4: Using new generic selection system
         private readonly HeatMapRenderer _heatMapRenderer;
 
         private float _cameraX;
@@ -66,7 +67,7 @@ namespace VillageBuilder.Game.Graphics
             _sidebar = new SidebarRenderer();
             _particleSystem = new ParticleSystem();
             _tooltipRenderer = new TooltipRenderer();
-            _selectionManager = new SelectionManager();
+            _selectionManager = new SelectionCoordinator(); // Phase 4: Drop-in replacement!
             _heatMapRenderer = new HeatMapRenderer();
         }
 

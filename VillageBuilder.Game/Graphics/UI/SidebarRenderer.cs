@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raylib_cs;
@@ -28,7 +28,7 @@ namespace VillageBuilder.Game.Graphics.UI
             _tileInspector = new TileInspector(FontSize, SmallFontSize);
         }
 
-        public void Render(GameEngine engine, VillageBuilder.Game.Core.SelectionManager? selectionManager = null)
+        public void Render(GameEngine engine, VillageBuilder.Game.Core.Selection.SelectionCoordinator? selectionManager = null)
         {
             // Calculate sidebar position (right side of screen)
             _sidebarX = (int)(GraphicsConfig.ScreenWidth * 0.7f);
@@ -388,7 +388,7 @@ namespace VillageBuilder.Game.Graphics.UI
                 LogLevel.Warning => "!",
                 LogLevel.Error => "X",
                 LogLevel.Success => "+",
-                _ => "�"
+                _ => "?"
             };
         }
 
@@ -416,7 +416,7 @@ namespace VillageBuilder.Game.Graphics.UI
             };
         }
         
-        private int RenderPersonInfo(GameEngine engine, VillageBuilder.Engine.Entities.Person person, int startY, VillageBuilder.Game.Core.SelectionManager? selectionManager = null)
+        private int RenderPersonInfo(GameEngine engine, VillageBuilder.Engine.Entities.Person person, int startY, VillageBuilder.Game.Core.Selection.SelectionCoordinator? selectionManager = null)
         {
             var y = startY;
             var textColor = new Color(200, 200, 200, 255);
@@ -548,7 +548,7 @@ namespace VillageBuilder.Game.Graphics.UI
                                 return y + 5;
                             }
 
-                    private int RenderWildlifeInfo(GameEngine engine, WildlifeEntity wildlife, int y, VillageBuilder.Game.Core.SelectionManager? selectionManager)
+                    private int RenderWildlifeInfo(GameEngine engine, WildlifeEntity wildlife, int y, VillageBuilder.Game.Core.Selection.SelectionCoordinator? selectionManager)
                     {
                         var textColor = new Color(200, 200, 200, 255);
 
@@ -679,7 +679,7 @@ namespace VillageBuilder.Game.Graphics.UI
                             _sidebarWidth - Padding * 2,
                             FontSize,
                             new Color(100, 100, 120, 255),
-                            '─'
+                            '-'
                         );
                         y += LineHeight;
 
@@ -846,7 +846,7 @@ namespace VillageBuilder.Game.Graphics.UI
                     foreach (var familyGroup in workersByFamily)
                     {
                         var family = familyGroup.Key!;
-                        GraphicsConfig.DrawConsoleTextAuto($"    � {family.FamilyName} ({familyGroup.Count()})", 
+                        GraphicsConfig.DrawConsoleTextAuto($"    ? {family.FamilyName} ({familyGroup.Count()})", 
                             _sidebarX + Padding + 10, y, SmallFontSize - 2, textColor);
                         y += LineHeight;
                     }
@@ -880,7 +880,7 @@ namespace VillageBuilder.Game.Graphics.UI
                     foreach (var familyGroup in residentsByFamily)
                     {
                         var family = familyGroup.Key!;
-                        GraphicsConfig.DrawConsoleTextAuto($"    � {family.FamilyName} ({familyGroup.Count()})", 
+                        GraphicsConfig.DrawConsoleTextAuto($"    ? {family.FamilyName} ({familyGroup.Count()})", 
                             _sidebarX + Padding + 10, y, SmallFontSize - 2, textColor);
                         y += LineHeight;
                     }
@@ -898,7 +898,7 @@ namespace VillageBuilder.Game.Graphics.UI
                     foreach (var familyGroup in workersByFamily)
                     {
                         var family = familyGroup.Key!;
-                        GraphicsConfig.DrawConsoleTextAuto($"    � {family.FamilyName} ({familyGroup.Count()})", 
+                        GraphicsConfig.DrawConsoleTextAuto($"    ? {family.FamilyName} ({familyGroup.Count()})", 
                             _sidebarX + Padding + 10, y, SmallFontSize - 2, textColor);
                         y += LineHeight;
                     }

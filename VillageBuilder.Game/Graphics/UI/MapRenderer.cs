@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,7 +17,7 @@ namespace VillageBuilder.Game.Graphics.UI
         // Font size now dynamic from GraphicsConfig
         private static int FontSize => GraphicsConfig.SmallConsoleFontSize;
 
-        public void Render(GameEngine engine, Camera2D camera, VillageBuilder.Game.Core.SelectionManager? selectionManager = null)
+        public void Render(GameEngine engine, Camera2D camera, VillageBuilder.Game.Core.Selection.SelectionCoordinator? selectionManager = null)
         {
             var grid = engine.Grid;
             var tileSize = GraphicsConfig.TileSize;
@@ -208,11 +208,11 @@ namespace VillageBuilder.Game.Graphics.UI
             // Glyphs for each stage
             string stageGlyph = stage switch
             {
-                ConstructionStage.Foundation => "░",    // Light shade
-                ConstructionStage.Framing => "▒",       // Medium shade
-                ConstructionStage.Walls => "▓",         // Dark shade
-                ConstructionStage.Finishing => "█",     // Full block
-                _ => "·"
+                ConstructionStage.Foundation => "�",    // Light shade
+                ConstructionStage.Framing => "�",       // Medium shade
+                ConstructionStage.Walls => "�",         // Dark shade
+                ConstructionStage.Finishing => "�",     // Full block
+                _ => "�"
             };
 
             foreach (var tilePos in occupiedTiles)
@@ -247,7 +247,7 @@ namespace VillageBuilder.Game.Graphics.UI
                 int workerCount = building.ConstructionWorkers.Count;
                 if (workerCount > 0)
                 {
-                    string workerText = $"👷{workerCount}";
+                    string workerText = $"??{workerCount}";
                     int workerX = (int)centerPos.X + 4;
                     int workerY = (int)centerPos.Y + 4;
                     GraphicsConfig.DrawConsoleText(workerText, workerX, workerY, 12, new Color(255, 200, 100, 255));
@@ -380,7 +380,7 @@ namespace VillageBuilder.Game.Graphics.UI
             );
         }
         
-        private void RenderPeople(GameEngine engine, int tileSize, int minX, int maxX, int minY, int maxY, VillageBuilder.Game.Core.SelectionManager? selectionManager)
+        private void RenderPeople(GameEngine engine, int tileSize, int minX, int maxX, int minY, int maxY, VillageBuilder.Game.Core.Selection.SelectionCoordinator? selectionManager)
         {
             // Group people by FAMILY - families always render together as a stack
             foreach (var family in engine.Families)
@@ -433,7 +433,7 @@ namespace VillageBuilder.Game.Graphics.UI
                 }
 
                 // Draw family symbol (multiple people icon)
-                string glyph = aliveMembers.Count > 1 ? "☻" : "☺"; // Filled circle for families, regular for singles
+                string glyph = aliveMembers.Count > 1 ? "?" : "?"; // Filled circle for families, regular for singles
                 var glyphColor = new Color(255, 255, 255, 255);
 
                 int textX = (int)pos.X + (tileSize - FontSize) / 2;
@@ -460,7 +460,7 @@ namespace VillageBuilder.Game.Graphics.UI
                                     }
                                 }
 
-                        private void RenderWildlife(GameEngine engine, int tileSize, int minX, int maxX, int minY, int maxY, VillageBuilder.Game.Core.SelectionManager? selectionManager)
+                        private void RenderWildlife(GameEngine engine, int tileSize, int minX, int maxX, int minY, int maxY, VillageBuilder.Game.Core.Selection.SelectionCoordinator? selectionManager)
                         {
                             if (engine.WildlifeManager == null) return;
 
@@ -608,15 +608,15 @@ namespace VillageBuilder.Game.Graphics.UI
                         {
                             return type switch
                             {
-                                WildlifeType.Rabbit => "🐰",
-                                WildlifeType.Deer => "🦌",
-                                WildlifeType.Boar => "🐗",
-                                WildlifeType.Wolf => "🐺",
-                                WildlifeType.Fox => "🦊",
-                                WildlifeType.Bear => "🐻",
-                                WildlifeType.Bird => "🐦",
-                                WildlifeType.Duck => "🦆",
-                                WildlifeType.Turkey => "🦃",
+                                WildlifeType.Rabbit => "??",
+                                WildlifeType.Deer => "??",
+                                WildlifeType.Boar => "??",
+                                WildlifeType.Wolf => "??",
+                                WildlifeType.Fox => "??",
+                                WildlifeType.Bear => "??",
+                                WildlifeType.Bird => "??",
+                                WildlifeType.Duck => "??",
+                                WildlifeType.Turkey => "??",
                                 _ => "?"
                             };
                         }
@@ -680,32 +680,32 @@ namespace VillageBuilder.Game.Graphics.UI
                 // Forest - tree variations
                 TileType.Forest => variant switch
                 {
-                    0 => "♣",
-                    1 => "♠",
-                    2 => "↟",
-                    _ => "↑"
+                    0 => "?",
+                    1 => "?",
+                    2 => "?",
+                    _ => "?"
                 },
 
                 // Water - wave variations
                 TileType.Water => variant switch
                 {
-                    0 => "≈",
+                    0 => "�",
                     1 => "~",
-                    2 => "∼",
-                    _ => "≋"
+                    2 => "~",
+                    _ => "?"
                 },
 
                 // Mountain - rock variations
                 TileType.Mountain => variant switch
                 {
-                    0 => "▲",
-                    1 => "▴",
-                    2 => "△",
-                    _ => "⌃"
+                    0 => "?",
+                    1 => "?",
+                    2 => "?",
+                    _ => "^"
                 },
 
-                TileType.Field => "≡",
-                TileType.Road => "·",
+                TileType.Field => "=",
+                TileType.Road => "�",
                 _ => "?"
             };
         }
