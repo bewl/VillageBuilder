@@ -324,17 +324,28 @@ namespace VillageBuilder.Engine.World
         LogFallen,
         Mushroom,
         
-                // Wildlife (visual only, moves)
-                BirdFlying,
-                BirdPerched,
-                Butterfly,
-                RabbitSmall,
-                DeerGrazing,
-                FishInWater,
-                // NEW: Predators and other wildlife
-                FoxHunting,
-                WolfPack,
-                BearGrizzly,
-                BoarWild
-            }
-        }
+                        // Wildlife (visual only, moves)
+                        BirdFlying,
+                        BirdPerched,
+                        Butterfly,
+                        RabbitSmall,
+                        DeerGrazing,
+                        FishInWater,
+                        // NEW: Predators and other wildlife
+                        FoxHunting,
+                        WolfPack,
+                        BearGrizzly,
+                        BoarWild,
+
+                        // NEW: Building sprites (for sprite mode rendering)
+                        BuildingHouse,
+                        BuildingFarm,
+                        BuildingWarehouse,
+                        BuildingWorkshop,
+                        BuildingMine,
+                        BuildingLumberyard,
+                        BuildingMarket,
+                        BuildingWell,
+                        BuildingTownHall
+                    }
+                }

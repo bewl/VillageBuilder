@@ -102,42 +102,53 @@ namespace VillageBuilder.Game.Graphics
             _spriteFilePaths[DecorationType.Mushroom] = "1f344.png";          // ?? mushroom
 
             _spriteFilePaths[DecorationType.BirdFlying] = "1f426.png";        // ?? bird
-                _spriteFilePaths[DecorationType.BirdPerched] = "1f99c.png";       // ?? parrot
-                _spriteFilePaths[DecorationType.Butterfly] = "1f98b.png";         // ?? butterfly
-                _spriteFilePaths[DecorationType.RabbitSmall] = "1f430.png";       // ?? rabbit face
-                _spriteFilePaths[DecorationType.DeerGrazing] = "1f98c.png";       // ?? deer
-                _spriteFilePaths[DecorationType.FishInWater] = "1f41f.png";       // ?? fish
-                // NEW: Predators and other wildlife
-                _spriteFilePaths[DecorationType.FoxHunting] = "1f98a.png";        // ?? fox
-                _spriteFilePaths[DecorationType.WolfPack] = "1f43a.png";          // ?? wolf
-                _spriteFilePaths[DecorationType.BearGrizzly] = "1f43b.png";       // ?? bear
-                _spriteFilePaths[DecorationType.BoarWild] = "1f417.png";          // ?? boar
+            _spriteFilePaths[DecorationType.BirdPerched] = "1f99c.png";       // ?? parrot
+            _spriteFilePaths[DecorationType.Butterfly] = "1f98b.png";         // ?? butterfly
+            _spriteFilePaths[DecorationType.RabbitSmall] = "1f430.png";       // ?? rabbit face
+            _spriteFilePaths[DecorationType.DeerGrazing] = "1f98c.png";       // ?? deer
+            _spriteFilePaths[DecorationType.FishInWater] = "1f41f.png";       // ?? fish
+            // NEW: Predators and other wildlife
+            _spriteFilePaths[DecorationType.FoxHunting] = "1f98a.png";        // ?? fox
+            _spriteFilePaths[DecorationType.WolfPack] = "1f43a.png";          // ?? wolf
+            _spriteFilePaths[DecorationType.BearGrizzly] = "1f43b.png";       // ?? bear
+            _spriteFilePaths[DecorationType.BoarWild] = "1f417.png";          // ?? boar
 
-                // UI Icon mappings (stored in assets/sprites/ui_icons/)
-                _uiIconFilePaths[UIIconType.Wood] = "1fab5.png";          // ?? wood
-                _uiIconFilePaths[UIIconType.Stone] = "1faa8.png";         // ?? rock
-                _uiIconFilePaths[UIIconType.Grain] = "1f33e.png";         // ?? grain
-                _uiIconFilePaths[UIIconType.Tools] = "1f528.png";         // ?? hammer
-                _uiIconFilePaths[UIIconType.Firewood] = "1f525.png";      // ?? fire
+            // NEW: Building sprites
+            _spriteFilePaths[DecorationType.BuildingHouse] = "1f3e0.png";     // ?? house
+            _spriteFilePaths[DecorationType.BuildingFarm] = "1f33e.png";      // ?? sheaf of rice (farm)
+            _spriteFilePaths[DecorationType.BuildingWarehouse] = "1f3e6.png"; // ?? bank (warehouse)
+            _spriteFilePaths[DecorationType.BuildingWorkshop] = "1f3ed.png";  // ?? factory
+            _spriteFilePaths[DecorationType.BuildingMine] = "26cf.png";       // ?? pickaxe
+            _spriteFilePaths[DecorationType.BuildingLumberyard] = "1fab5.png";// ?? wood
+            _spriteFilePaths[DecorationType.BuildingMarket] = "1f3ea.png";    // ?? convenience store
+            _spriteFilePaths[DecorationType.BuildingWell] = "1f6b0.png";      // ?? potable water
+            _spriteFilePaths[DecorationType.BuildingTownHall] = "1f3db.png";  // ??? classical building
 
-                _uiIconFilePaths[UIIconType.People] = "1f465.png";        // ?? people
-                _uiIconFilePaths[UIIconType.Buildings] = "1f3d8.png";     // ??? buildings
-                _uiIconFilePaths[UIIconType.House] = "1f3e0.png";         // ?? house
-                _uiIconFilePaths[UIIconType.Workshop] = "1f3ed.png";      // ?? factory
-                _uiIconFilePaths[UIIconType.Mine] = "26cf.png";           // ?? pickaxe
+            // UI Icon mappings (stored in assets/sprites/ui_icons/)
+            _uiIconFilePaths[UIIconType.Wood] = "1fab5.png";          // ?? wood
+            _uiIconFilePaths[UIIconType.Stone] = "1faa8.png";         // ?? rock
+            _uiIconFilePaths[UIIconType.Grain] = "1f33e.png";         // ?? grain
+            _uiIconFilePaths[UIIconType.Tools] = "1f528.png";         // ?? hammer
+            _uiIconFilePaths[UIIconType.Firewood] = "1f525.png";      // ?? fire
 
-                _uiIconFilePaths[UIIconType.Save] = "1f4be.png";          // ?? floppy disk
-                _uiIconFilePaths[UIIconType.Construction] = "1f3d7.png";  // ??? construction
-                _uiIconFilePaths[UIIconType.Settings] = "2699.png";       // ?? gear
-                _uiIconFilePaths[UIIconType.Stats] = "1f4ca.png";         // ?? chart
+            _uiIconFilePaths[UIIconType.People] = "1f465.png";        // ?? people
+            _uiIconFilePaths[UIIconType.Buildings] = "1f3d8.png";     // ??? buildings
+            _uiIconFilePaths[UIIconType.House] = "1f3e0.png";         // ?? house
+            _uiIconFilePaths[UIIconType.Workshop] = "1f3ed.png";      // ?? factory
+            _uiIconFilePaths[UIIconType.Mine] = "26cf.png";           // ?? pickaxe
 
-                _uiIconFilePaths[UIIconType.Sleeping] = "1f4a4.png";      // ?? zzz
-                _uiIconFilePaths[UIIconType.Walking] = "1f6b6.png";       // ?? person walking
-                _uiIconFilePaths[UIIconType.Resting] = "1f60c.png";       // ?? relieved face
-                _uiIconFilePaths[UIIconType.Idle] = "1f9cd.png";          // ?? person standing
+            _uiIconFilePaths[UIIconType.Save] = "1f4be.png";          // ?? floppy disk
+            _uiIconFilePaths[UIIconType.Construction] = "1f3d7.png";  // ??? construction
+            _uiIconFilePaths[UIIconType.Settings] = "2699.png";       // ?? gear
+            _uiIconFilePaths[UIIconType.Stats] = "1f4ca.png";         // ?? chart
 
-                    _uiIconFilePaths[UIIconType.Info] = "2139.png";           // ?? information
-                    _uiIconFilePaths[UIIconType.Warning] = "26a0.png";        // ?? warning
+            _uiIconFilePaths[UIIconType.Sleeping] = "1f4a4.png";      // ?? zzz
+            _uiIconFilePaths[UIIconType.Walking] = "1f6b6.png";       // ?? person walking
+            _uiIconFilePaths[UIIconType.Resting] = "1f60c.png";       // ?? relieved face
+            _uiIconFilePaths[UIIconType.Idle] = "1f9cd.png";          // ?? person standing
+
+            _uiIconFilePaths[UIIconType.Info] = "2139.png";           // ?? information
+            _uiIconFilePaths[UIIconType.Warning] = "26a0.png";        // ?? warning
                     _uiIconFilePaths[UIIconType.Error] = "274c.png";          // ? cross mark
                     _uiIconFilePaths[UIIconType.Success] = "2705.png";        // ? check mark
 
@@ -371,9 +382,29 @@ namespace VillageBuilder.Game.Graphics
                     return _uiIcons.ContainsKey(type);
                 }
 
-                /// <summary>
-                /// Get the number of loaded UI icons
-                /// </summary>
-                public int LoadedUIIconCount => _uiIcons.Count;
-            }
-        }
+                        /// <summary>
+                        /// Get the number of loaded UI icons
+                        /// </summary>
+                        public int LoadedUIIconCount => _uiIcons.Count;
+
+                        /// <summary>
+                        /// Get the decoration type for a building type (for sprite rendering)
+                        /// </summary>
+                        public static DecorationType? GetBuildingSpriteType(VillageBuilder.Engine.Buildings.BuildingType buildingType)
+                        {
+                            return buildingType switch
+                            {
+                                VillageBuilder.Engine.Buildings.BuildingType.House => DecorationType.BuildingHouse,
+                                VillageBuilder.Engine.Buildings.BuildingType.Farm => DecorationType.BuildingFarm,
+                                VillageBuilder.Engine.Buildings.BuildingType.Warehouse => DecorationType.BuildingWarehouse,
+                                VillageBuilder.Engine.Buildings.BuildingType.Workshop => DecorationType.BuildingWorkshop,
+                                VillageBuilder.Engine.Buildings.BuildingType.Mine => DecorationType.BuildingMine,
+                                VillageBuilder.Engine.Buildings.BuildingType.Lumberyard => DecorationType.BuildingLumberyard,
+                                VillageBuilder.Engine.Buildings.BuildingType.Market => DecorationType.BuildingMarket,
+                                VillageBuilder.Engine.Buildings.BuildingType.Well => DecorationType.BuildingWell,
+                                VillageBuilder.Engine.Buildings.BuildingType.TownHall => DecorationType.BuildingTownHall,
+                                _ => null
+                            };
+                        }
+                    }
+                }

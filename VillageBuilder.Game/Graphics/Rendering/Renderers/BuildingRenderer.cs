@@ -43,31 +43,113 @@ namespace VillageBuilder.Game.Graphics.Rendering.Renderers
         {
             bool showLights = building.ShouldShowLights(context.GameTime);
             var occupiedTiles = building.GetOccupiedTiles();
-            
+
+            // Check if we should use sprite mode
+            bool useSpriteMode = context.UseSpriteMode && SpriteAtlasManager.Instance.SpriteModeEnabled;
+            var spriteType = SpriteAtlasManager.GetBuildingSpriteType(building.Type);
+            bool hasSprite = spriteType.HasValue && SpriteAtlasManager.Instance.HasSprite(spriteType.Value);
+
+            // If sprite mode and we have a sprite, render building as single sprite on center tile
+            if (useSpriteMode && hasSprite && occupiedTiles.Count > 0)
+            {
+                RenderBuildingAsSprite(building, occupiedTiles, spriteType.Value, context, showLights);
+            }
+            else
+            {
+                // ASCII mode - render each tile individually
+                RenderBuildingAsASCII(building, occupiedTiles, context, showLights);
+            }
+        }
+
+        private void RenderBuildingAsSprite(Building building, List<Engine.Buildings.Vector2Int> occupiedTiles, 
+            Engine.World.DecorationType spriteType, RenderContext context, bool showLights)
+        {
+            // Get center tile
+            var centerTile = occupiedTiles[occupiedTiles.Count / 2];
+            var centerPos = context.GetWorldPosition(centerTile.X, centerTile.Y);
+
+            // Draw background tiles first
+            foreach (var tilePos in occupiedTiles)
+            {
+                var pos = context.GetWorldPosition(tilePos.X, tilePos.Y);
+                Color bgColor = new Color(40, 35, 30, 255); // Dark brown for building background
+
+                // Apply darkness
+                if (context.DarknessFactor > 0)
+                {
+                    bgColor = RenderHelpers.DarkenColor(bgColor, context.DarknessFactor);
+                }
+
+                // Add warm glow if lights are on
+                if (showLights)
+                {
+                    bgColor = AddWarmGlow(bgColor, 0.3f);
+                }
+
+                Raylib.DrawRectangle((int)pos.X, (int)pos.Y, context.TileSize, context.TileSize, bgColor);
+            }
+
+            // Draw sprite on center tile
+            var sprite = SpriteAtlasManager.Instance.GetSprite(spriteType);
+            if (sprite != null)
+            {
+                var texture = sprite.Value;
+                int spriteSize = context.TileSize;
+
+                // For multi-tile buildings, make sprite larger
+                if (occupiedTiles.Count > 1)
+                {
+                    spriteSize = (int)(context.TileSize * 1.5f);
+                    centerPos.X -= (spriteSize - context.TileSize) / 2;
+                    centerPos.Y -= (spriteSize - context.TileSize) / 2;
+                }
+
+                var destRect = new Rectangle((int)centerPos.X, (int)centerPos.Y, spriteSize, spriteSize);
+                var sourceRect = new Rectangle(0, 0, texture.Width, texture.Height);
+
+                // Tint based on time of day
+                Color tint = Color.White;
+                if (context.DarknessFactor > 0)
+                {
+                    int brightness = (int)(255 * (1 - context.DarknessFactor));
+                    tint = new Color(brightness, brightness, brightness, 255);
+                }
+                if (showLights)
+                {
+                    tint = AddWarmGlow(tint, 0.4f);
+                }
+
+                Raylib.DrawTexturePro(texture, sourceRect, destRect, Vector2.Zero, 0, tint);
+            }
+        }
+
+        private void RenderBuildingAsASCII(Building building, List<Engine.Buildings.Vector2Int> occupiedTiles, 
+            RenderContext context, bool showLights)
+        {
             foreach (var tilePos in occupiedTiles)
             {
                 var buildingTile = building.GetTileAtWorldPosition(tilePos.X, tilePos.Y);
                 if (buildingTile == null) continue;
-                
+
                 var pos = context.GetWorldPosition(tilePos.X, tilePos.Y);
-                
+
                 // Get tile color based on type
                 Color tileColor = GetBuildingTileColor(building.Type, buildingTile.Value.Type);
-                
+
                 // Apply darkness
                 if (context.DarknessFactor > 0)
                 {
                     tileColor = RenderHelpers.DarkenColor(tileColor, context.DarknessFactor);
                 }
-                
+
                 // Add warm glow if lights are on
                 if (showLights && buildingTile.Value.Type == BuildingTileType.Floor)
                 {
                     tileColor = AddWarmGlow(tileColor, 0.4f);
                 }
-                
+
                 Raylib.DrawRectangle((int)pos.X, (int)pos.Y, context.TileSize, context.TileSize, tileColor);
-                
+
                 // Draw building glyph
                 if (buildingTile.Value.Glyph != ' ')
                 {
