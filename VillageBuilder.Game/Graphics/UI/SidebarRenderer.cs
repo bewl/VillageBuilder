@@ -42,8 +42,8 @@ namespace VillageBuilder.Game.Graphics.UI
             // Draw sidebar background (darker terminal-like)
             Raylib.DrawRectangle(_sidebarX, _sidebarY, _sidebarWidth, _sidebarHeight, new Color(15, 15, 20, 255));
             
-            // Draw border using box-drawing characters
-            DrawBorder(_sidebarX, _sidebarY, _sidebarWidth, _sidebarHeight);
+                // Draw border using box-drawing characters
+                DrawBorder(_sidebarX, _sidebarY, _sidebarWidth, _sidebarHeight);
 
                 var currentY = _sidebarY + Padding;
 
@@ -56,6 +56,13 @@ namespace VillageBuilder.Game.Graphics.UI
                     currentY,
                     _sidebarWidth - (Padding * 2),
                     _sidebarHeight - (Padding * 2));
+
+                // Always show Commands section (below panels)
+                currentY = _sidebarY + (_sidebarHeight / 2); // Position commands in middle area
+                currentY = RenderCommands(engine, currentY);
+
+                // Event Log is always shown at bottom
+                RenderEventLog(currentY);
             }
 
         private void DrawBorder(int x, int y, int width, int height)
