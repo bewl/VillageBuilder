@@ -29,6 +29,9 @@ GraphicsConfig.InitializeWindow();
 // Load console font
 GraphicsConfig.LoadFont();
 
+// Auto-download sprites if missing (happens once on first run)
+SpriteDownloader.AutoDownloadIfMissing();
+
 // Initialize save directory
 SaveLoadService.InitializeSaveDirectory();
 

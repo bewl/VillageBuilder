@@ -28,7 +28,8 @@ namespace VillageBuilder.Game.Graphics.UI
             // Row 1: Time, Weather, Speed (adjusted spacing for 20px font)
             RenderTimeInfo(engine, Padding, Padding);
             RenderWeatherInfo(engine, 450, Padding);
-            RenderSpeedInfo(timeScale, isPaused, GraphicsConfig.ScreenWidth - 300, Padding);
+            RenderSpeedInfo(timeScale, isPaused, GraphicsConfig.ScreenWidth - 450, Padding);
+            RenderModeInfo(GraphicsConfig.ScreenWidth - 200, Padding);
 
             // Row 2: Key Resources (adjusted spacing)
             RenderResources(engine, Padding, Padding + 26);
@@ -118,10 +119,24 @@ namespace VillageBuilder.Game.Graphics.UI
 
             GraphicsConfig.DrawConsoleText($"[{statusIcon}]", x, y, FontSize, statusColor);
             GraphicsConfig.DrawConsoleText(statusText, x + 35, y, FontSize, statusColor);
-            
+
             // Speed indicator
             var speedText = $"×{timeScale:F1}";
             GraphicsConfig.DrawConsoleText(speedText, x + 100, y, FontSize, new Color(255, 255, 100, 255));
+        }
+
+        private void RenderModeInfo(int x, int y)
+        {
+            var (icon, text, color) = GraphicsConfig.BuildingDetail switch
+            {
+                GraphicsConfig.BuildingRenderMode.ASCII => ("█", "ASCII", new Color(150, 150, 150, 255)),
+                GraphicsConfig.BuildingRenderMode.IconSprite => ("◆", "ICON", new Color(100, 200, 255, 255)),
+                GraphicsConfig.BuildingRenderMode.DetailedSprite => ("♦", "FULL", new Color(255, 150, 255, 255)),
+                _ => ("?", "???", Color.Gray)
+            };
+
+            GraphicsConfig.DrawConsoleText($"[{icon}]", x, y, SmallFontSize, color);
+            GraphicsConfig.DrawConsoleText(text, x + 30, y, SmallFontSize, color);
         }
 
         private void RenderHeatMapStatus(HeatMapRenderer heatMapRenderer, int x, int y)

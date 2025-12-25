@@ -121,7 +121,29 @@ namespace VillageBuilder.Game.Graphics
             if (Raylib.IsKeyPressed(KeyboardKey.K)) _selectedBuildingType = BuildingType.Workshop;
             if (Raylib.IsKeyPressed(KeyboardKey.E)) _selectedBuildingType = BuildingType.Well;
             if (Raylib.IsKeyPressed(KeyboardKey.T)) _selectedBuildingType = BuildingType.TownHall;
-            
+
+            // Building render mode toggle (B key cycles through ASCII -> Icon -> Detailed)
+            if (Raylib.IsKeyPressed(KeyboardKey.B))
+            {
+                GraphicsConfig.BuildingDetail = GraphicsConfig.BuildingDetail switch
+                {
+                    GraphicsConfig.BuildingRenderMode.ASCII => GraphicsConfig.BuildingRenderMode.IconSprite,
+                    GraphicsConfig.BuildingRenderMode.IconSprite => GraphicsConfig.BuildingRenderMode.DetailedSprite,
+                    GraphicsConfig.BuildingRenderMode.DetailedSprite => GraphicsConfig.BuildingRenderMode.ASCII,
+                    _ => GraphicsConfig.BuildingRenderMode.IconSprite
+                };
+
+                string modeName = GraphicsConfig.BuildingDetail switch
+                {
+                    GraphicsConfig.BuildingRenderMode.ASCII => "ASCII (Retro)",
+                    GraphicsConfig.BuildingRenderMode.IconSprite => "Icon Sprite (Simple)",
+                    GraphicsConfig.BuildingRenderMode.DetailedSprite => "Detailed Sprite (Full)",
+                    _ => "Unknown"
+                };
+
+                EventLog.Instance.AddMessage($"Building Render Mode: {modeName}", LogLevel.Info);
+            }
+
             // Rotation (R key or middle mouse button)
             if (_selectedBuildingType.HasValue && (Raylib.IsKeyPressed(KeyboardKey.R) || Raylib.IsMouseButtonPressed(MouseButton.Middle)))
             {
