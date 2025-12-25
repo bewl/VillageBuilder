@@ -8,14 +8,14 @@ namespace VillageBuilder.Game.Graphics.UI.Panels
     public class PanelRenderContext
     {
         public GameEngine Engine { get; set; } = null!;
-        public VillageBuilder.Game.Core.SelectionManager? SelectionManager { get; set; }
+        public VillageBuilder.Game.Core.Selection.SelectionCoordinator? SelectionManager { get; set; }  // Phase 5: Use SelectionCoordinator
         public int StartX { get; set; }
         public int StartY { get; set; }
         public int Width { get; set; }
-        public int FontSize { get; set; }
-        public int SmallFontSize { get; set; }
-        public int LineHeight { get; set; }
-        public int Padding { get; set; }
+        public int FontSize => GraphicsConfig.SmallConsoleFontSize;
+        public int SmallFontSize => (int)(FontSize * 0.9f);
+        public int LineHeight => FontSize + 4;
+        public int Padding => 10;
     }
     
     /// <summary>

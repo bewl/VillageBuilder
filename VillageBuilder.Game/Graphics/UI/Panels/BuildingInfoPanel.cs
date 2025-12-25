@@ -1,3 +1,4 @@
+using System.Linq;
 using Raylib_cs;
 using VillageBuilder.Engine.Buildings;
 using VillageBuilder.Game.Core.Selection;
@@ -10,58 +11,69 @@ namespace VillageBuilder.Game.Graphics.UI.Panels
     /// </summary>
     public class BuildingInfoPanel : BasePanel
     {
-        public override string Title => "Building Info";
-        
-        protected override void RenderContent(int x, int y, int width, int height)
+        public override bool CanRender(PanelRenderContext context)
         {
-            var coordinator = Context?.SelectionManager as SelectionCoordinator;
+            var coordinator = context.SelectionManager as SelectionCoordinator;
+            return coordinator?.SelectedBuilding != null;
+        }
+
+        public override int Render(PanelRenderContext context)
+        {
+            var coordinator = context.SelectionManager as SelectionCoordinator;
             var building = coordinator?.SelectedBuilding;
-            
-            if (building == null) return;
-            
-            int currentY = y;
-            
+
+            if (building == null) return 0;
+
+            int y = context.StartY;
+            int x = context.StartX;
+
+            DrawSectionHeader("BUILDING INFO", x, y, context.FontSize);
+            y += context.LineHeight + 5;
+
             // Building type
-            DrawText($"Type: {building.Type}", x, currentY, Color.White);
-            currentY += LineHeight;
-            
+            GraphicsConfig.DrawConsoleText($"Type: {building.Type}", x, y, context.SmallFontSize, Color.White);
+            y += context.LineHeight;
+
             // Construction status
             if (!building.IsConstructed)
             {
                 var stage = building.GetConstructionStage();
                 var progress = building.GetConstructionProgressPercent();
-                
-                DrawText($"Construction: {stage}", x, currentY, Color.Yellow);
-                currentY += LineHeight;
-                
-                DrawText($"Progress: {progress}%", x, currentY, Color.Cyan);
-                currentY += LineHeight;
-                
+
+                GraphicsConfig.DrawConsoleText($"Construction: {stage}", x, y, context.SmallFontSize, Color.Yellow);
+                y += context.LineHeight;
+
+                GraphicsConfig.DrawConsoleText($"Progress: {progress}%", x, y, context.SmallFontSize, new Color(0, 255, 255, 255));
+                y += context.LineHeight;
+
                 var workerCount = building.ConstructionWorkers.Count;
-                DrawText($"Workers: {workerCount}", x, currentY, Color.LightGray);
-                currentY += LineHeight;
+                GraphicsConfig.DrawConsoleText($"Workers: {workerCount}", x, y, context.SmallFontSize, Color.LightGray);
+                y += context.LineHeight;
             }
             else
             {
-                DrawText("Status: Operational", x, currentY, Color.Green);
-                currentY += LineHeight;
-                
+                GraphicsConfig.DrawConsoleText("Status: Operational", x, y, context.SmallFontSize, Color.Green);
+                y += context.LineHeight;
+
                 // Workers
-                if (building.AssignedWorkers.Count > 0)
+                if (building.Workers.Count > 0)
                 {
-                    DrawText($"Workers: {building.AssignedWorkers.Count}", x, currentY, Color.Cyan);
-                    currentY += LineHeight;
+                    GraphicsConfig.DrawConsoleText($"Workers: {building.Workers.Count}", x, y, context.SmallFontSize, new Color(0, 255, 255, 255));
+                    y += context.LineHeight;
                 }
-                
+
                 // Production (if applicable)
                 if (building.Type == BuildingType.Farm || 
                     building.Type == BuildingType.Mine ||
                     building.Type == BuildingType.Lumberyard)
                 {
-                    currentY += 5;
-                    DrawText("Production Active", x, currentY, Color.Green);
+                    y += 5;
+                    GraphicsConfig.DrawConsoleText("Production Active", x, y, context.SmallFontSize, Color.Green);
+                    y += context.LineHeight;
                 }
             }
+
+            return y - context.StartY;
         }
     }
 }

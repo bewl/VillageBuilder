@@ -1,3 +1,4 @@
+using System.Linq;
 using Raylib_cs;
 using VillageBuilder.Engine.Entities;
 using VillageBuilder.Game.Core.Selection;
@@ -10,57 +11,69 @@ namespace VillageBuilder.Game.Graphics.UI.Panels
     /// </summary>
     public class PersonInfoPanel : BasePanel
     {
-        public override string Title => "Person Info";
-        
-        protected override void RenderContent(int x, int y, int width, int height)
+        public override bool CanRender(PanelRenderContext context)
         {
-            var coordinator = Context?.SelectionManager as SelectionCoordinator;
+            var coordinator = context.SelectionManager as SelectionCoordinator;
+            return coordinator?.SelectedPerson != null;
+        }
+
+        public override int Render(PanelRenderContext context)
+        {
+            var coordinator = context.SelectionManager as SelectionCoordinator;
             var person = coordinator?.SelectedPerson;
-            
-            if (person == null) return;
-            
-            int currentY = y;
-            
+
+            if (person == null) return 0;
+
+            int y = context.StartY;
+            int x = context.StartX;
+
+            DrawSectionHeader("PERSON INFO", x, y, context.FontSize);
+            y += context.LineHeight + 5;
+
             // Name and basic info
-            DrawText($"Name: {person.FirstName} {person.LastName}", x, currentY, Color.White);
-            currentY += LineHeight;
-            
-            DrawText($"Age: {person.Age}", x, currentY, Color.LightGray);
-            currentY += LineHeight;
-            
-            DrawText($"Gender: {person.Gender}", x, currentY, Color.LightGray);
-            currentY += LineHeight;
-            
+            GraphicsConfig.DrawConsoleText($"{person.FirstName} {person.LastName}", x, y, context.SmallFontSize, Color.White);
+            y += context.LineHeight;
+
+            GraphicsConfig.DrawConsoleText($"Age: {person.Age}", x, y, context.SmallFontSize, Color.LightGray);
+            y += context.LineHeight;
+
+            GraphicsConfig.DrawConsoleText($"Gender: {person.Gender}", x, y, context.SmallFontSize, Color.LightGray);
+            y += context.LineHeight;
+
             // Health
             var healthColor = person.Health > 70 ? Color.Green : 
                              person.Health > 30 ? Color.Yellow : Color.Red;
-            DrawText($"Health: {person.Health}%", x, currentY, healthColor);
-            currentY += LineHeight;
-            
+            GraphicsConfig.DrawConsoleText($"Health: {person.Health}%", x, y, context.SmallFontSize, healthColor);
+            y += context.LineHeight;
+
             // Hunger
             var hungerColor = person.Hunger < 30 ? Color.Green :
                              person.Hunger < 70 ? Color.Yellow : Color.Red;
-            DrawText($"Hunger: {person.Hunger}%", x, currentY, hungerColor);
-            currentY += LineHeight;
-            
+            GraphicsConfig.DrawConsoleText($"Hunger: {person.Hunger}%", x, y, context.SmallFontSize, hungerColor);
+            y += context.LineHeight;
+
             // Task
             if (person.AssignedBuilding != null)
             {
-                DrawText($"Working at: {person.AssignedBuilding.Type}", x, currentY, Color.Cyan);
-                currentY += LineHeight;
+                GraphicsConfig.DrawConsoleText($"Working at: {person.AssignedBuilding.Type}", x, y, context.SmallFontSize, new Color(0, 255, 255, 255));
+                y += context.LineHeight;
             }
             else
             {
-                DrawText("Status: Idle", x, currentY, Color.Gray);
-                currentY += LineHeight;
+                GraphicsConfig.DrawConsoleText("Status: Idle", x, y, context.SmallFontSize, Color.Gray);
+                y += context.LineHeight;
             }
-            
+
             // Family
             if (person.Family != null)
             {
-                currentY += 5;
-                DrawText($"Family: {person.Family.Members.Count(m => m.IsAlive)} members", x, currentY, Color.Yellow);
+                y += 5;
+                var familySize = person.Family.Members.Count(m => m.IsAlive);
+                GraphicsConfig.DrawConsoleText($"Family: {familySize} members", x, y, context.SmallFontSize, Color.Yellow);
+                y += context.LineHeight;
             }
+
+            return y - context.StartY;
         }
     }
 }

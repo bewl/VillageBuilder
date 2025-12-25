@@ -10,45 +10,57 @@ namespace VillageBuilder.Game.Graphics.UI.Panels
     /// </summary>
     public class GameStatsPanel : BasePanel
     {
-        public override string Title => "Village Stats";
-        
-        protected override void RenderContent(int x, int y, int width, int height)
+        public override bool CanRender(PanelRenderContext context)
         {
-            if (Context?.Engine == null) return;
-            
-            var engine = Context.Engine;
-            int currentY = y;
-            
+            // Always render - this is the default stats panel
+            return true;
+        }
+
+        public override int Render(PanelRenderContext context)
+        {
+            if (context.Engine == null) return 0;
+
+            var engine = context.Engine;
+            int y = context.StartY;
+            int x = context.StartX;
+
+            DrawSectionHeader("VILLAGE STATS", x, y, context.FontSize);
+            y += context.LineHeight + 5;
+
             // Population
             var totalPeople = engine.Families.Sum(f => f.Members.Count(p => p.IsAlive));
-            DrawText($"Population: {totalPeople}", x, currentY, Color.White);
-            currentY += LineHeight;
-            
+            GraphicsConfig.DrawConsoleText($"Population: {totalPeople}", x, y, context.SmallFontSize, Color.White);
+            y += context.LineHeight;
+
             // Buildings
-            DrawText($"Buildings: {engine.Buildings.Count}", x, currentY, Color.LightGray);
-            currentY += LineHeight;
-            
+            GraphicsConfig.DrawConsoleText($"Buildings: {engine.Buildings.Count}", x, y, context.SmallFontSize, Color.LightGray);
+            y += context.LineHeight;
+
             // Resources (if accessible)
             if (engine.VillageResources != null)
             {
-                currentY += 5;
-                DrawText("Resources:", x, currentY, Color.Yellow);
-                currentY += LineHeight;
-                
+                y += 5;
+                GraphicsConfig.DrawConsoleText("Resources:", x, y, context.SmallFontSize, Color.Yellow);
+                y += context.LineHeight;
+
                 foreach (var resource in engine.VillageResources.GetAll())
                 {
-                    DrawText($"  {resource.Key}: {resource.Value}", x + 10, currentY, Color.Cyan);
-                    currentY += LineHeight;
+                    var colorValue = new Color(0, 255, 255, 255); // Cyan
+                    GraphicsConfig.DrawConsoleText($"  {resource.Key}: {resource.Value}", x + 10, y, context.SmallFontSize, colorValue);
+                    y += context.LineHeight;
                 }
             }
-            
+
             // Wildlife count
             if (engine.WildlifeManager != null)
             {
-                currentY += 5;
+                y += 5;
                 var wildlifeCount = engine.WildlifeManager.Wildlife.Count(w => w.IsAlive);
-                DrawText($"Wildlife: {wildlifeCount}", x, currentY, Color.Green);
+                GraphicsConfig.DrawConsoleText($"Wildlife: {wildlifeCount}", x, y, context.SmallFontSize, Color.Green);
+                y += context.LineHeight;
             }
+
+            return y - context.StartY;
         }
     }
 }
