@@ -4,6 +4,8 @@ using VillageBuilder.Engine.Entities;
 using VillageBuilder.Engine.Entities.Wildlife;
 using VillageBuilder.Engine.Resources;
 using VillageBuilder.Engine.Systems;
+using VillageBuilder.Engine.Systems.Interfaces;  // Phase 2: Subsystem interfaces
+using VillageBuilder.Engine.Systems.Implementation;  // Phase 2: Subsystem adapters
 using VillageBuilder.Engine.World;
 using VillageBuilder.Engine.Core;
 using VillageBuilder.Engine.Config;  // Phase 1: Add Config namespace
@@ -22,6 +24,14 @@ namespace VillageBuilder.Engine.Core
         public CommandQueue CommandQueue { get; }
         public GameConfiguration Configuration { get; }
         public WildlifeManager WildlifeManager { get; }
+
+        // Phase 2: Subsystem interfaces for clean architecture
+        public IResourceSystem Resources { get; private set; }
+        public IWorldSystem World { get; private set; }
+        public IBuildingSystem BuildingSystem { get; private set; }
+        public IPopulationSystem Population { get; private set; }
+        public IWildlifeSystem Wildlife { get; private set; }
+        public ISimulationSystem Simulation { get; private set; }
 
         private int _seed;
         private int _currentTick;
@@ -64,9 +74,17 @@ namespace VillageBuilder.Engine.Core
                 InitializeStartingResources(configuration);
                 InitializeStartingFamilies();
 
-                // Spawn initial wildlife population
-                WildlifeManager.InitializeWildlife();
-            }
+                                // Spawn initial wildlife population
+                                WildlifeManager.InitializeWildlife();
+
+                                // Phase 2: Initialize subsystem interfaces (clean architecture)
+                                Resources = new ResourceSystem();
+                                World = new WorldSystemAdapter(Grid);
+                                BuildingSystem = new BuildingSystemAdapter(Buildings);
+                                Population = new PopulationSystemAdapter(Families);
+                                Wildlife = new WildlifeSystemAdapter(Grid, _seed, wildlifeConfig);
+                                Simulation = new SimulationSystem();
+                            }
 
         private void InitializeStartingResources(GameConfiguration config)
         {
