@@ -124,6 +124,44 @@ namespace VillageBuilder.Game.Graphics
             _spriteFilePaths[DecorationType.BuildingWell] = "1f6b0.png";      // ?? potable water
             _spriteFilePaths[DecorationType.BuildingTownHall] = "1f3db.png";  // ??? classical building
 
+            // NEW: Building component sprites (detailed mode)
+            // Floors
+            _spriteFilePaths[DecorationType.BuildingFloorWood] = "1fab5.png";   // ?? wood
+            _spriteFilePaths[DecorationType.BuildingFloorStone] = "1faa8.png";  // ?? rock
+            _spriteFilePaths[DecorationType.BuildingFloorCarpet] = "1f7eb.png"; // ?? brown square
+            _spriteFilePaths[DecorationType.BuildingFloorDirt] = "1f7eb.png";   // ?? brown square
+
+            // Walls
+            _spriteFilePaths[DecorationType.BuildingWallBrick] = "1f9f1.png";   // ?? brick
+            _spriteFilePaths[DecorationType.BuildingWallStone] = "1faa8.png";   // ?? rock
+            _spriteFilePaths[DecorationType.BuildingWallWood] = "1fab5.png";    // ?? wood
+            _spriteFilePaths[DecorationType.BuildingWallPlaster] = "2b1c.png";  // ? white square
+
+            // Doors
+            _spriteFilePaths[DecorationType.BuildingDoorClosed] = "1f6aa.png";  // ?? door
+            _spriteFilePaths[DecorationType.BuildingDoorOpen] = "1f6b6.png";    // ?? person walking
+            _spriteFilePaths[DecorationType.BuildingDoorLocked] = "1f512.png";  // ?? locked
+
+            // Windows
+            _spriteFilePaths[DecorationType.BuildingWindowDay] = "1fa9f.png";   // ?? window
+            _spriteFilePaths[DecorationType.BuildingWindowNight] = "1f319.png"; // ?? crescent moon
+            _spriteFilePaths[DecorationType.BuildingWindowBroken] = "1f525.png";// ?? fire (broken)
+
+            // Roofs
+            _spriteFilePaths[DecorationType.BuildingRoofTiles] = "1f53a.png";   // ?? red triangle
+            _spriteFilePaths[DecorationType.BuildingRoofThatch] = "1f33e.png";  // ?? sheaf of rice
+            _spriteFilePaths[DecorationType.BuildingRoofShingles] = "1f7e9.png";// ?? green square
+            _spriteFilePaths[DecorationType.BuildingRoofWood] = "1fab5.png";    // ?? wood
+
+            // Foundations
+            _spriteFilePaths[DecorationType.BuildingFoundationStone] = "1faa8.png"; // ?? rock
+            _spriteFilePaths[DecorationType.BuildingFoundationWood] = "1fab5.png";  // ?? wood
+
+            // Decorations
+            _spriteFilePaths[DecorationType.BuildingChimney] = "1f525.png";     // ?? fire
+            _spriteFilePaths[DecorationType.BuildingFence] = "1f6a7.png";       // ?? construction
+            _spriteFilePaths[DecorationType.BuildingSign] = "1f4cb.png";        // ?? clipboard
+
             // UI Icon mappings (stored in assets/sprites/ui_icons/)
             _uiIconFilePaths[UIIconType.Wood] = "1fab5.png";          // ?? wood
             _uiIconFilePaths[UIIconType.Stone] = "1faa8.png";         // ?? rock
@@ -387,24 +425,62 @@ namespace VillageBuilder.Game.Graphics
                         /// </summary>
                         public int LoadedUIIconCount => _uiIcons.Count;
 
-                        /// <summary>
-                        /// Get the decoration type for a building type (for sprite rendering)
-                        /// </summary>
-                        public static DecorationType? GetBuildingSpriteType(VillageBuilder.Engine.Buildings.BuildingType buildingType)
-                        {
-                            return buildingType switch
-                            {
-                                VillageBuilder.Engine.Buildings.BuildingType.House => DecorationType.BuildingHouse,
-                                VillageBuilder.Engine.Buildings.BuildingType.Farm => DecorationType.BuildingFarm,
-                                VillageBuilder.Engine.Buildings.BuildingType.Warehouse => DecorationType.BuildingWarehouse,
-                                VillageBuilder.Engine.Buildings.BuildingType.Workshop => DecorationType.BuildingWorkshop,
-                                VillageBuilder.Engine.Buildings.BuildingType.Mine => DecorationType.BuildingMine,
-                                VillageBuilder.Engine.Buildings.BuildingType.Lumberyard => DecorationType.BuildingLumberyard,
-                                VillageBuilder.Engine.Buildings.BuildingType.Market => DecorationType.BuildingMarket,
-                                VillageBuilder.Engine.Buildings.BuildingType.Well => DecorationType.BuildingWell,
-                                VillageBuilder.Engine.Buildings.BuildingType.TownHall => DecorationType.BuildingTownHall,
-                                _ => null
-                            };
-                        }
-                    }
-                }
+                                /// <summary>
+                                /// Get the decoration type for a building type (for sprite rendering)
+                                /// </summary>
+                                public static DecorationType? GetBuildingSpriteType(VillageBuilder.Engine.Buildings.BuildingType buildingType)
+                                {
+                                    return buildingType switch
+                                    {
+                                        VillageBuilder.Engine.Buildings.BuildingType.House => DecorationType.BuildingHouse,
+                                        VillageBuilder.Engine.Buildings.BuildingType.Farm => DecorationType.BuildingFarm,
+                                        VillageBuilder.Engine.Buildings.BuildingType.Warehouse => DecorationType.BuildingWarehouse,
+                                        VillageBuilder.Engine.Buildings.BuildingType.Workshop => DecorationType.BuildingWorkshop,
+                                        VillageBuilder.Engine.Buildings.BuildingType.Mine => DecorationType.BuildingMine,
+                                        VillageBuilder.Engine.Buildings.BuildingType.Lumberyard => DecorationType.BuildingLumberyard,
+                                        VillageBuilder.Engine.Buildings.BuildingType.Market => DecorationType.BuildingMarket,
+                                        VillageBuilder.Engine.Buildings.BuildingType.Well => DecorationType.BuildingWell,
+                                        VillageBuilder.Engine.Buildings.BuildingType.TownHall => DecorationType.BuildingTownHall,
+                                        _ => null
+                                    };
+                                }
+
+                                        /// <summary>
+                                        /// Get the sprite type for a specific building tile (for detailed per-tile rendering)
+                                        /// </summary>
+                                        public static DecorationType? GetBuildingTileSprite(
+                                            VillageBuilder.Engine.Buildings.BuildingType buildingType,
+                                            VillageBuilder.Engine.Buildings.BuildingTileType tileType,
+                                            bool lightsOn = false)
+                                        {
+                                            // Building-specific floor types
+                                            var floorType = buildingType switch
+                                            {
+                                                VillageBuilder.Engine.Buildings.BuildingType.House => DecorationType.BuildingFloorWood,
+                                                VillageBuilder.Engine.Buildings.BuildingType.Farm => DecorationType.BuildingFloorDirt,
+                                                VillageBuilder.Engine.Buildings.BuildingType.Warehouse => DecorationType.BuildingFloorStone,
+                                                VillageBuilder.Engine.Buildings.BuildingType.Workshop => DecorationType.BuildingFloorStone,
+                                                VillageBuilder.Engine.Buildings.BuildingType.Mine => DecorationType.BuildingFloorStone,
+                                                VillageBuilder.Engine.Buildings.BuildingType.TownHall => DecorationType.BuildingFloorCarpet,
+                                                _ => DecorationType.BuildingFloorWood
+                                            };
+
+                                            // Building-specific wall types
+                                            var wallType = buildingType switch
+                                            {
+                                                VillageBuilder.Engine.Buildings.BuildingType.House => DecorationType.BuildingWallBrick,
+                                                VillageBuilder.Engine.Buildings.BuildingType.Workshop => DecorationType.BuildingWallStone,
+                                                VillageBuilder.Engine.Buildings.BuildingType.TownHall => DecorationType.BuildingWallStone,
+                                                _ => DecorationType.BuildingWallWood
+                                            };
+
+                                            return tileType switch
+                                            {
+                                                VillageBuilder.Engine.Buildings.BuildingTileType.Floor => floorType,
+                                                VillageBuilder.Engine.Buildings.BuildingTileType.Wall => wallType,
+                                                VillageBuilder.Engine.Buildings.BuildingTileType.Door => DecorationType.BuildingDoorClosed,
+                                                _ => null
+                                            };
+                                        }
+                                    }
+                                }

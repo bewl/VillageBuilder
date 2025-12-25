@@ -324,28 +324,67 @@ namespace VillageBuilder.Engine.World
         LogFallen,
         Mushroom,
         
-                        // Wildlife (visual only, moves)
-                        BirdFlying,
-                        BirdPerched,
-                        Butterfly,
-                        RabbitSmall,
-                        DeerGrazing,
-                        FishInWater,
-                        // NEW: Predators and other wildlife
-                        FoxHunting,
-                        WolfPack,
-                        BearGrizzly,
-                        BoarWild,
+                                // Wildlife (visual only, moves)
+                                BirdFlying,
+                                BirdPerched,
+                                Butterfly,
+                                RabbitSmall,
+                                DeerGrazing,
+                                FishInWater,
+                                // NEW: Predators and other wildlife
+                                FoxHunting,
+                                WolfPack,
+                                BearGrizzly,
+                                BoarWild,
 
-                        // NEW: Building sprites (for sprite mode rendering)
-                        BuildingHouse,
-                        BuildingFarm,
-                        BuildingWarehouse,
-                        BuildingWorkshop,
-                        BuildingMine,
-                        BuildingLumberyard,
-                        BuildingMarket,
-                        BuildingWell,
-                        BuildingTownHall
-                    }
-                }
+                                // NEW: Building sprites (for sprite mode rendering)
+                                // Full building icons (centered overview)
+                                BuildingHouse,
+                                BuildingFarm,
+                                BuildingWarehouse,
+                                BuildingWorkshop,
+                                BuildingMine,
+                                BuildingLumberyard,
+                                BuildingMarket,
+                                BuildingWell,
+                                BuildingTownHall,
+
+                                // NEW: Building component sprites (detailed per-tile rendering)
+                                // Floors
+                                BuildingFloorWood,
+                                BuildingFloorStone,
+                                BuildingFloorCarpet,
+                                BuildingFloorDirt,
+
+                                // Walls
+                                BuildingWallBrick,
+                                BuildingWallStone,
+                                BuildingWallWood,
+                                BuildingWallPlaster,
+
+                                // Doors
+                                BuildingDoorClosed,
+                                BuildingDoorOpen,
+                                BuildingDoorLocked,
+
+                                // Windows
+                                BuildingWindowDay,
+                                BuildingWindowNight,
+                                BuildingWindowBroken,
+
+                                // Roofs
+                                BuildingRoofTiles,
+                                BuildingRoofThatch,
+                                BuildingRoofShingles,
+                                BuildingRoofWood,
+
+                                // Foundations
+                                BuildingFoundationStone,
+                                BuildingFoundationWood,
+
+                                // Decorations
+                                BuildingChimney,
+                                BuildingFence,
+                                BuildingSign
+                            }
+                        }

@@ -33,6 +33,21 @@ namespace VillageBuilder.Game.Graphics
         // Sprite settings - Modern emoji rendering via textures
         public static bool UseSpriteMode { get; private set; } = true;  // Default: prefer sprites over ASCII
 
+        /// <summary>
+        /// Building rendering mode configuration
+        /// </summary>
+        public enum BuildingRenderMode
+        {
+            ASCII,              // Traditional character grid
+            IconSprite,         // Single centered emoji per building (simple)
+            DetailedSprite      // Per-tile sprites with variants (detailed)
+        }
+
+        /// <summary>
+        /// Current building rendering detail level
+        /// </summary>
+        public static BuildingRenderMode BuildingDetail { get; set; } = BuildingRenderMode.IconSprite;
+
         // Dynamic font sizing based on screen height
         // Base: 24px at 1080p (increased from 20px for better glyph accommodation)
         // Uses sublinear scaling to prevent oversized fonts at high resolutions

@@ -46,18 +46,99 @@ namespace VillageBuilder.Game.Graphics.Rendering.Renderers
 
             // Check if we should use sprite mode
             bool useSpriteMode = context.UseSpriteMode && SpriteAtlasManager.Instance.SpriteModeEnabled;
-            var spriteType = SpriteAtlasManager.GetBuildingSpriteType(building.Type);
-            bool hasSprite = spriteType.HasValue && SpriteAtlasManager.Instance.HasSprite(spriteType.Value);
 
-            // If sprite mode and we have a sprite, render building as single sprite on center tile
-            if (useSpriteMode && hasSprite && occupiedTiles.Count > 0)
+            if (!useSpriteMode)
             {
-                RenderBuildingAsSprite(building, occupiedTiles, spriteType.Value, context, showLights);
-            }
-            else
-            {
-                // ASCII mode - render each tile individually
+                // ASCII mode - render traditional character grid
                 RenderBuildingAsASCII(building, occupiedTiles, context, showLights);
+                return;
+            }
+
+            // Sprite mode - check detail level
+            var spriteType = SpriteAtlasManager.GetBuildingSpriteType(building.Type);
+            bool hasIconSprite = spriteType.HasValue && SpriteAtlasManager.Instance.HasSprite(spriteType.Value);
+
+            // Choose rendering mode based on configuration and sprite availability
+            var renderMode = GraphicsConfig.BuildingDetail;
+
+            // Fallback to icon if detailed sprites not available
+            if (renderMode == GraphicsConfig.BuildingRenderMode.DetailedSprite && !hasIconSprite)
+            {
+                renderMode = GraphicsConfig.BuildingRenderMode.IconSprite;
+            }
+
+            switch (renderMode)
+            {
+                case GraphicsConfig.BuildingRenderMode.DetailedSprite:
+                    RenderBuildingDetailed(building, occupiedTiles, context, showLights);
+                    break;
+
+                case GraphicsConfig.BuildingRenderMode.IconSprite:
+                    if (hasIconSprite)
+                    {
+                        RenderBuildingAsSprite(building, occupiedTiles, spriteType.Value, context, showLights);
+                    }
+                    else
+                    {
+                        RenderBuildingAsASCII(building, occupiedTiles, context, showLights);
+                    }
+                    break;
+
+                default:
+                    RenderBuildingAsASCII(building, occupiedTiles, context, showLights);
+                    break;
+            }
+        }
+
+        private void RenderBuildingDetailed(Building building, List<Engine.Buildings.Vector2Int> occupiedTiles,
+            RenderContext context, bool showLights)
+        {
+            // Render each tile with appropriate sprite variant
+            foreach (var tilePos in occupiedTiles)
+            {
+                var buildingTile = building.GetTileAtWorldPosition(tilePos.X, tilePos.Y);
+                if (buildingTile == null) continue;
+
+                var pos = context.GetWorldPosition(tilePos.X, tilePos.Y);
+
+                // Get appropriate sprite for this tile type
+                var spriteType = SpriteAtlasManager.GetBuildingTileSprite(
+                    building.Type,
+                    buildingTile.Value.Type,
+                    showLights);
+
+                if (spriteType.HasValue)
+                {
+                    var sprite = SpriteAtlasManager.Instance.GetSprite(spriteType.Value);
+                    if (sprite != null)
+                    {
+                        // Render tile sprite
+                        var destRect = new Rectangle(
+                            (int)pos.X, (int)pos.Y,
+                            context.TileSize, context.TileSize);
+                        var sourceRect = new Rectangle(
+                            0, 0, sprite.Value.Width, sprite.Value.Height);
+
+                        Color tint = Color.White;
+                        if (context.DarknessFactor > 0)
+                        {
+                            int brightness = (int)(255 * (1 - context.DarknessFactor));
+                            tint = new Color(brightness, brightness, brightness, 255);
+                        }
+                        if (showLights && buildingTile.Value.Type == BuildingTileType.Floor)
+                        {
+                            tint = AddWarmGlow(tint, 0.3f);
+                        }
+
+                        Raylib.DrawTexturePro(
+                            sprite.Value, sourceRect, destRect,
+                            Vector2.Zero, 0, tint);
+                        continue;
+                    }
+                }
+
+                // Fallback to ASCII for this tile if sprite not available
+                RenderBuildingTileASCII(buildingTile.Value, pos, context, showLights);
             }
         }
 
@@ -150,15 +231,41 @@ namespace VillageBuilder.Game.Graphics.Rendering.Renderers
 
                 Raylib.DrawRectangle((int)pos.X, (int)pos.Y, context.TileSize, context.TileSize, tileColor);
 
-                // Draw building glyph
-                if (buildingTile.Value.Glyph != ' ')
-                {
-                    DrawBuildingGlyph(buildingTile.Value, pos, context, showLights);
+                        // Draw building glyph
+                        if (buildingTile.Value.Glyph != ' ')
+                        {
+                            DrawBuildingGlyph(buildingTile.Value, pos, context, showLights);
+                        }
+                    }
                 }
-            }
-        }
-        
-        private void RenderConstruction(Building building, RenderContext context)
+
+                private void RenderBuildingTileASCII(BuildingTile tile, Vector2 pos, RenderContext context, bool showLights)
+                {
+                    // Get tile color based on type
+                    Color tileColor = GetBuildingTileColor(tile.Type);
+
+                    // Apply darkness
+                    if (context.DarknessFactor > 0)
+                    {
+                        tileColor = RenderHelpers.DarkenColor(tileColor, context.DarknessFactor);
+                    }
+
+                    // Add warm glow if lights are on
+                    if (showLights && tile.Type == BuildingTileType.Floor)
+                    {
+                        tileColor = AddWarmGlow(tileColor, 0.4f);
+                    }
+
+                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, context.TileSize, context.TileSize, tileColor);
+
+                    // Draw building glyph
+                    if (tile.Glyph != ' ')
+                    {
+                        DrawBuildingGlyph(tile, pos, context, showLights);
+                    }
+                }
+
+                private void RenderConstruction(Building building, RenderContext context)
         {
             var stage = building.GetConstructionStage();
             var occupiedTiles = building.GetOccupiedTiles();
@@ -264,6 +371,18 @@ namespace VillageBuilder.Game.Graphics.Rendering.Renderers
                 BuildingTileType.Floor => GetFloorColor(type),
                 BuildingTileType.Door => new Color(120, 80, 40, 255),
                 _ => GetBackgroundColor(type)
+            };
+        }
+
+        private Color GetBuildingTileColor(BuildingTileType tileType)
+        {
+            // Simplified version for when building type is unknown
+            return tileType switch
+            {
+                BuildingTileType.Wall => new Color(100, 80, 60, 255),
+                BuildingTileType.Floor => new Color(60, 50, 40, 255),
+                BuildingTileType.Door => new Color(120, 80, 40, 255),
+                _ => new Color(60, 60, 60, 255)
             };
         }
         
