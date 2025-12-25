@@ -50,7 +50,10 @@ namespace VillageBuilder.Game.Graphics.Rendering
                 UseSpriteMode = GraphicsConfig.UseSpriteMode,
                 GameTime = engine.Time,
                 Camera = camera,
-                SelectionManager = selectionManager
+                SelectionManager = selectionManager,
+                ViewBounds = new Rectangle(minX, minY, maxX - minX, maxY - minY),  // FIX: Set visible bounds for culling
+                ScreenWidth = GraphicsConfig.ScreenWidth,
+                ScreenHeight = GraphicsConfig.ScreenHeight
             };
 
             // Phase 1: Render terrain tiles and buildings
