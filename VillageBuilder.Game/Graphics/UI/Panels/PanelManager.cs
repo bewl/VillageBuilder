@@ -14,6 +14,7 @@ namespace VillageBuilder.Game.Graphics.UI.Panels
         private readonly BuildingInfoPanel _buildingPanel;
         private readonly GameStatsPanel _gameStatsPanel;
         private readonly QuickStatsPanel _quickStatsPanel;
+        private readonly TileInfoPanel _tileInfoPanel;
 
         public PanelManager()
         {
@@ -22,6 +23,7 @@ namespace VillageBuilder.Game.Graphics.UI.Panels
             _buildingPanel = new BuildingInfoPanel();
             _gameStatsPanel = new GameStatsPanel();
             _quickStatsPanel = new QuickStatsPanel();
+            _tileInfoPanel = new TileInfoPanel();
         }
 
         /// <summary>
@@ -32,40 +34,46 @@ namespace VillageBuilder.Game.Graphics.UI.Panels
         {
             // Create render context with proper properties
             var context = new PanelRenderContext
-                {
-                    Engine = engine,
-                    SelectionManager = selectionManager,
-                    StartX = x,
-                    StartY = y
-                };
+            {
+                Engine = engine,
+                SelectionManager = selectionManager,
+                StartX = x,
+                StartY = y,
+                Width = width  // Fix: Set width for TileInspector and other panels
+            };
 
-                // Show context-specific panel based on selection
-                // Only ONE panel renders to avoid overlap
-                if (selectionManager != null && selectionManager.HasSelection())
-                {
-                    if (selectionManager.SelectedPerson != null)
+                    // Show context-specific panel based on selection
+                    // Only ONE panel renders to avoid overlap
+                    if (selectionManager != null && selectionManager.HasSelection())
                     {
-                        _personPanel.Render(context);
-                    }
-                    else if (selectionManager.SelectedWildlife != null)
-                    {
-                        _wildlifePanel.Render(context);
-                    }
-                    else if (selectionManager.SelectedBuilding != null)
-                    {
-                        _buildingPanel.Render(context);
+                        if (selectionManager.SelectedPerson != null)
+                        {
+                            _personPanel.Render(context);
+                        }
+                        else if (selectionManager.SelectedWildlife != null)
+                        {
+                            _wildlifePanel.Render(context);
+                        }
+                        else if (selectionManager.SelectedBuilding != null)
+                        {
+                            _buildingPanel.Render(context);
+                        }
+                        else if (selectionManager.SelectedTile != null)
+                        {
+                            // Show tile inspector for tile-only selection
+                            _tileInfoPanel.Render(context);
+                        }
+                        else
+                        {
+                            // Show quick stats if selection exists but no specific entity
+                            _quickStatsPanel.Render(context);
+                        }
                     }
                     else
                     {
-                        // Show quick stats if only tile selected (no specific entity)
+                        // No selection - show quick stats
                         _quickStatsPanel.Render(context);
                     }
                 }
-                else
-                {
-                    // No selection - show quick stats
-                    _quickStatsPanel.Render(context);
-                }
-            }
     }
 }
