@@ -6,6 +6,7 @@ using VillageBuilder.Engine.Core;
 using VillageBuilder.Engine.Buildings;
 using VillageBuilder.Engine.Entities.Wildlife;
 using VillageBuilder.Engine.World;
+using VillageBuilder.Game.Graphics.UI.Panels;  // Phase 5: Panel system
 
 namespace VillageBuilder.Game.Graphics.UI
 {
@@ -22,10 +23,12 @@ namespace VillageBuilder.Game.Graphics.UI
         private int _sidebarWidth;
         private int _sidebarHeight;
         private TileInspector _tileInspector;
+        private readonly PanelManager _panelManager;  // Phase 5: Panel orchestrator
 
         public SidebarRenderer()
         {
             _tileInspector = new TileInspector(FontSize, SmallFontSize);
+            _panelManager = new PanelManager();  // Phase 5: Initialize panel manager
         }
 
         public void Render(GameEngine engine, VillageBuilder.Game.Core.Selection.SelectionCoordinator? selectionManager = null)
@@ -42,44 +45,18 @@ namespace VillageBuilder.Game.Graphics.UI
             // Draw border using box-drawing characters
             DrawBorder(_sidebarX, _sidebarY, _sidebarWidth, _sidebarHeight);
 
-            var currentY = _sidebarY + Padding;
+                var currentY = _sidebarY + Padding;
 
-            // Show context-aware content based on selection
-            if (selectionManager != null && selectionManager.HasSelection())
-            {
-                if (selectionManager.SelectedPerson != null)
-                {
-                    // Show person info
-                    currentY = RenderPersonInfo(engine, selectionManager.SelectedPerson, currentY, selectionManager);
-                }
-                else if (selectionManager.SelectedWildlife != null)
-                {
-                    // Show wildlife info
-                    currentY = RenderWildlifeInfo(engine, selectionManager.SelectedWildlife, currentY, selectionManager);
-                }
-                else if (selectionManager.SelectedBuilding != null)
-                {
-                    // Show building info with family assignment
-                    currentY = RenderBuildingInfo(engine, selectionManager.SelectedBuilding, currentY);
-                }
-                else if (selectionManager.SelectedTile != null)
-                {
-                    // Show tile inspection
-                    currentY += _tileInspector.Render(selectionManager.SelectedTile, 
-                                                     _sidebarX + Padding, currentY, 
-                                                     _sidebarWidth - Padding * 2);
-                }
+                // Phase 5: Use PanelManager to orchestrate all UI panels
+                // This replaces inline rendering with modular, testable panels
+                _panelManager.RenderPanels(
+                    engine, 
+                    selectionManager,
+                    _sidebarX + Padding,
+                    currentY,
+                    _sidebarWidth - (Padding * 2),
+                    _sidebarHeight - (Padding * 2));
             }
-            else
-            {
-                // Default view - show quick stats and map commands
-                currentY = RenderQuickStats(engine, currentY);
-                currentY = RenderCommands(engine, currentY);
-            }
-
-            // Event Log is always shown at bottom
-            RenderEventLog(currentY);
-        }
 
         private void DrawBorder(int x, int y, int width, int height)
         {
