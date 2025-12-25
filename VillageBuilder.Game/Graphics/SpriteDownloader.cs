@@ -11,8 +11,8 @@ namespace VillageBuilder.Game.Graphics
     /// </summary>
     public static class SpriteDownloader
     {
-        private const string ScriptPath = "Assets/sprites/download_building_sprites.ps1";
-        private const string OutputDir = "Assets/sprites/emojis";
+        private const string ScriptPath = "Assets\\sprites\\download_building_sprites.ps1";
+        private const string OutputDir = "Assets\\sprites\\emojis";
         
         /// <summary>
         /// Check if sprites directory exists and has files
