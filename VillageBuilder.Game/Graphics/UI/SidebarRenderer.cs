@@ -42,28 +42,29 @@ namespace VillageBuilder.Game.Graphics.UI
             // Draw sidebar background (darker terminal-like)
             Raylib.DrawRectangle(_sidebarX, _sidebarY, _sidebarWidth, _sidebarHeight, new Color(15, 15, 20, 255));
             
-                // Draw border using box-drawing characters
-                DrawBorder(_sidebarX, _sidebarY, _sidebarWidth, _sidebarHeight);
+                    // Draw border using box-drawing characters
+                    DrawBorder(_sidebarX, _sidebarY, _sidebarWidth, _sidebarHeight);
 
-                var currentY = _sidebarY + Padding;
+                    var currentY = _sidebarY + Padding;
 
-                // Phase 5: Use PanelManager to orchestrate all UI panels
-                // This replaces inline rendering with modular, testable panels
-                _panelManager.RenderPanels(
-                    engine, 
-                    selectionManager,
-                    _sidebarX + Padding,
-                    currentY,
-                    _sidebarWidth - (Padding * 2),
-                    _sidebarHeight - (Padding * 2));
+                    // Phase 5: Use PanelManager to orchestrate all UI panels
+                    // Panels will return their height, allowing us to position subsequent sections
+                    var panelHeight = 350; // Reserve space for panels (about 1/3 of sidebar)
+                    _panelManager.RenderPanels(
+                        engine, 
+                        selectionManager,
+                        _sidebarX + Padding,
+                        currentY,
+                        _sidebarWidth - (Padding * 2),
+                        panelHeight);
 
-                // Always show Commands section (below panels)
-                currentY = _sidebarY + (_sidebarHeight / 2); // Position commands in middle area
-                currentY = RenderCommands(engine, currentY);
+                    // Position Commands section below panels
+                    currentY += panelHeight + 15; // Add spacing
+                    currentY = RenderCommands(engine, currentY);
 
-                // Event Log is always shown at bottom
-                RenderEventLog(currentY);
-            }
+                    // Event Log at bottom (calculate to use remaining space)
+                    RenderEventLog(currentY + 10);
+                }
 
         private void DrawBorder(int x, int y, int width, int height)
         {

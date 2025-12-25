@@ -32,49 +32,40 @@ namespace VillageBuilder.Game.Graphics.UI.Panels
         {
             // Create render context with proper properties
             var context = new PanelRenderContext
-            {
-                Engine = engine,
-                SelectionManager = selectionManager,
-                StartX = x,
-                StartY = y
-            };
-
-            int currentY = y;
-            int panelSpacing = 10;
-
-            // Always show quick stats at top
-            var quickStatsHeight = _quickStatsPanel.Render(context);
-            currentY += quickStatsHeight + panelSpacing;
-
-            // Update context for next panel
-            context.StartY = currentY;
-
-            // Show context-specific panel based on selection
-            if (selectionManager != null && selectionManager.HasSelection())
-            {
-                if (selectionManager.SelectedPerson != null)
                 {
-                    _personPanel.Render(context);
-                }
-                else if (selectionManager.SelectedWildlife != null)
+                    Engine = engine,
+                    SelectionManager = selectionManager,
+                    StartX = x,
+                    StartY = y
+                };
+
+                // Show context-specific panel based on selection
+                // Only ONE panel renders to avoid overlap
+                if (selectionManager != null && selectionManager.HasSelection())
                 {
-                    _wildlifePanel.Render(context);
-                }
-                else if (selectionManager.SelectedBuilding != null)
-                {
-                    _buildingPanel.Render(context);
+                    if (selectionManager.SelectedPerson != null)
+                    {
+                        _personPanel.Render(context);
+                    }
+                    else if (selectionManager.SelectedWildlife != null)
+                    {
+                        _wildlifePanel.Render(context);
+                    }
+                    else if (selectionManager.SelectedBuilding != null)
+                    {
+                        _buildingPanel.Render(context);
+                    }
+                    else
+                    {
+                        // Show quick stats if only tile selected (no specific entity)
+                        _quickStatsPanel.Render(context);
+                    }
                 }
                 else
                 {
-                    // Show general stats if only tile selected
-                    _gameStatsPanel.Render(context);
+                    // No selection - show quick stats
+                    _quickStatsPanel.Render(context);
                 }
             }
-            else
-            {
-                // No selection - show general game stats
-                _gameStatsPanel.Render(context);
-            }
-        }
     }
 }
