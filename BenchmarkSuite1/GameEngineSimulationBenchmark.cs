@@ -12,34 +12,39 @@ using System.Collections.Generic;
 
 namespace VillageBuilder.Benchmarks
 {
-    [SimpleJob(RuntimeMoniker.Net90)]
+    /// <summary>
+    /// Benchmarks GameEngine.SimulateTick() performance across different village sizes.
+    /// Uses snapshot/restore pattern to avoid terrain generation overhead between iterations.
+    /// 
+    /// IMPORTANT: For reliable results:
+    /// - Close all background applications (browser, IDE, Discord, etc.)
+    /// - Plug in laptop to AC power (prevent thermal throttling)
+    /// - Run from command line: dotnet run -c Release
+    /// - Wait for benchmark to complete (~5-10 minutes)
+    /// </summary>
+    [SimpleJob(
+        RuntimeMoniker.Net90,
+        warmupCount: 5,      // More warmup iterations for stable CPU/memory state
+        iterationCount: 20   // More measurement iterations for reliable mean
+    )]
     [CPUUsageDiagnoser]
+    [MemoryDiagnoser]  // Track GC collections and memory allocations
     public class GameEngineSimulationBenchmark
     {
-        // Keep one shared engine instance to avoid terrain generation overhead
-        private GameEngine _sharedEngine = null!;
-
         // Store snapshots for each scenario
         private GameEngineSnapshot _snapshotSmall = null!;
         private GameEngineSnapshot _snapshotMedium = null!;
         private GameEngineSnapshot _snapshotLarge = null!;
+        private GameEngineSnapshot _snapshotVeryLarge = null!;
 
         private GameEngine _engineSmall = null!;
         private GameEngine _engineMedium = null!;
         private GameEngine _engineLarge = null!;
+        private GameEngine _engineVeryLarge = null!;
 
         [GlobalSetup]
         public void Setup()
         {
-            // Create one shared engine instance (terrain generated once)
-            var config = new GameConfiguration
-            {
-                MapWidth = 100,
-                MapHeight = 100,
-                Seed = 12345
-            };
-            _sharedEngine = new GameEngine(1, config);
-
             // Create and snapshot each scenario
             _engineSmall = CreateEngine(3, 5);
             _snapshotSmall = TakeSnapshot(_engineSmall);
@@ -49,6 +54,9 @@ namespace VillageBuilder.Benchmarks
 
             _engineLarge = CreateEngine(25, 50);
             _snapshotLarge = TakeSnapshot(_engineLarge);
+
+            _engineVeryLarge = CreateEngine(200, 1000);
+            _snapshotVeryLarge = TakeSnapshot(_engineVeryLarge);
         }
 
         [IterationSetup]
@@ -58,6 +66,7 @@ namespace VillageBuilder.Benchmarks
             RestoreSnapshot(_engineSmall, _snapshotSmall);
             RestoreSnapshot(_engineMedium, _snapshotMedium);
             RestoreSnapshot(_engineLarge, _snapshotLarge);
+            RestoreSnapshot(_engineVeryLarge, _snapshotVeryLarge);
         }
 
         private class GameEngineSnapshot
@@ -74,7 +83,7 @@ namespace VillageBuilder.Benchmarks
             // Snapshot family and person states
             foreach (var family in engine.Families)
             {
-                var personStates = family.Members.Select(p => 
+                var personStates = family.Members.Select(p =>
                     (p, p.Position, p.CurrentTask, p.AssignedBuilding)
                 ).ToList();
                 snapshot.FamilyStates.Add((family, personStates));
@@ -126,32 +135,31 @@ namespace VillageBuilder.Benchmarks
                 }
             }
 
-                // Restore building states
-                foreach (var (building, progress, isConstructed, constructionWorkers, workers) in snapshot.BuildingStates)
-                {
-                    building.ConstructionProgress = progress;
-                    building.IsConstructed = isConstructed;
-                    building.ConstructionWorkers.Clear();
-                    building.ConstructionWorkers.AddRange(constructionWorkers);
-                    building.Workers.Clear();
-                    building.Workers.AddRange(workers);
-                }
-
-                // Restore wildlife states
-                foreach (var (wildlife, position, behavior, health, hunger, energy) in snapshot.WildlifeStates)
-                {
-                    wildlife.Position = position;
-                    wildlife.CurrentBehavior = behavior;
-                    wildlife.Health = health;
-                    wildlife.Hunger = hunger;
-                    wildlife.Energy = energy;
-                    wildlife.ClearPath();
-                }
+            // Restore building states
+            foreach (var (building, progress, isConstructed, constructionWorkers, workers) in snapshot.BuildingStates)
+            {
+                building.ConstructionProgress = progress;
+                building.IsConstructed = isConstructed;
+                building.ConstructionWorkers.Clear();
+                building.ConstructionWorkers.AddRange(constructionWorkers);
+                building.Workers.Clear();
+                building.Workers.AddRange(workers);
             }
+
+            // Restore wildlife states
+            foreach (var (wildlife, position, behavior, health, hunger, energy) in snapshot.WildlifeStates)
+            {
+                wildlife.Position = position;
+                wildlife.CurrentBehavior = behavior;
+                wildlife.Health = health;
+                wildlife.Hunger = hunger;
+                wildlife.Energy = energy;
+                wildlife.ClearPath();
+            }
+        }
 
         private GameEngine CreateEngine(int familyCount, int buildingCount)
         {
-            // Reuse the shared engine's grid to avoid terrain generation
             var config = new GameConfiguration
             {
                 MapWidth = 100,
@@ -162,6 +170,7 @@ namespace VillageBuilder.Benchmarks
 
             // Clear default families (we'll create our own)
             engine.Families.Clear();
+            
             // Create families
             int personId = 1;
             for (int i = 0; i < familyCount; i++)
@@ -185,6 +194,7 @@ namespace VillageBuilder.Benchmarks
                 var x = 10 + (i % 10) * 8;
                 var y = 10 + (i / 10) * 8;
                 var building = new Building(buildingType, x, y, BuildingRotation.North, i + 1);
+                
                 // Mark half as constructed
                 if (i % 2 == 0)
                 {
@@ -193,7 +203,9 @@ namespace VillageBuilder.Benchmarks
                 else
                 {
                     // Assign construction workers to unfinished buildings
-                    var availablePeople = engine.Families.SelectMany(f => f.Members).Where(p => p.AssignedBuilding == null && p.CurrentTask == PersonTask.Idle).Take(2).ToList();
+                    var availablePeople = engine.Families.SelectMany(f => f.Members)
+                        .Where(p => p.AssignedBuilding == null && p.CurrentTask == PersonTask.Idle)
+                        .Take(2).ToList();
                     foreach (var worker in availablePeople)
                     {
                         building.ConstructionWorkers.Add(worker);
@@ -206,8 +218,12 @@ namespace VillageBuilder.Benchmarks
             }
 
             // Assign some people to work at constructed buildings
-            var constructedBuildings = engine.Buildings.Where(b => b.IsConstructed && b.Type != BuildingType.House).ToList();
-            var idleWorkers = engine.Families.SelectMany(f => f.Members).Where(p => p.AssignedBuilding == null && p.CurrentTask == PersonTask.Idle).ToList();
+            var constructedBuildings = engine.Buildings
+                .Where(b => b.IsConstructed && b.Type != BuildingType.House)
+                .ToList();
+            var idleWorkers = engine.Families.SelectMany(f => f.Members)
+                .Where(p => p.AssignedBuilding == null && p.CurrentTask == PersonTask.Idle)
+                .ToList();
             for (int i = 0; i < Math.Min(idleWorkers.Count, constructedBuildings.Count); i++)
             {
                 var worker = idleWorkers[i];
@@ -219,47 +235,32 @@ namespace VillageBuilder.Benchmarks
             return engine;
         }
 
-                [Benchmark(Baseline = true)]
-                public void SimulateTick_SmallVillage()
-                {
-                    // Simulate one tick with 3 families (9 people) and 5 buildings
-                    _engineSmall.SimulateTick();
-                }
-
-                [Benchmark]
-                public void SimulateTick_MediumVillage()
-                {
-                    // Simulate one tick with 10 families (30 people) and 20 buildings
-                    _engineMedium.SimulateTick();
-                }
-
-                [Benchmark]
-                public void SimulateTick_LargeVillage()
-                {
-                    // Simulate one tick with 25 families (75 people) and 50 buildings
-                    _engineLarge.SimulateTick();
-                }
-
-                [Benchmark]
-                public void SimulateTick_SmallVillage_Optimized()
-                {
-                    // Same as SmallVillage but with optimized tile clearing
-                    // (optimization is in GameEngine.SimulateTick - uses HashSet instead of grid iteration)
-                    _engineSmall.SimulateTick();
-                }
-
-                [Benchmark]
-                public void SimulateTick_MediumVillage_Optimized()
-                {
-                    // Same as MediumVillage but with optimized tile clearing
-                    _engineMedium.SimulateTick();
-                }
-
-                [Benchmark]
-                public void SimulateTick_LargeVillage_Optimized()
-                {
-                    // Same as LargeVillage but with optimized tile clearing
-                    _engineLarge.SimulateTick();
-                }
-            }
+        [Benchmark(Baseline = true)]
+        public void SimulateTick_SmallVillage()
+        {
+            // 3 families (9 people) + 5 buildings
+            _engineSmall.SimulateTick();
         }
+
+        [Benchmark]
+        public void SimulateTick_MediumVillage()
+        {
+            // 10 families (30 people) + 20 buildings
+            _engineMedium.SimulateTick();
+        }
+
+        [Benchmark]
+        public void SimulateTick_LargeVillage()
+        {
+            // 25 families (75 people) + 50 buildings
+            _engineLarge.SimulateTick();
+        }
+
+        [Benchmark]
+        public void SimulateTick_VeryLargeVillage()
+        {
+            // 200 families (600 people) + 1000 buildings
+            _engineVeryLarge.SimulateTick();
+        }
+    }
+}

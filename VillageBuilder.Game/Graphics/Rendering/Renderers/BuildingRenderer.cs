@@ -282,10 +282,10 @@ namespace VillageBuilder.Game.Graphics.Rendering.Renderers
             
             string stageGlyph = stage switch
             {
-                ConstructionStage.Foundation => "?",
-                ConstructionStage.Framing => "?",
-                ConstructionStage.Walls => "?",
-                ConstructionStage.Finishing => "?",
+                ConstructionStage.Foundation => "¦",
+                ConstructionStage.Framing => "¦",
+                ConstructionStage.Walls => "¦",
+                ConstructionStage.Finishing => "¦",
                 _ => "·"
             };
             
@@ -301,26 +301,18 @@ namespace VillageBuilder.Game.Graphics.Rendering.Renderers
                 GraphicsConfig.DrawConsoleText(stageGlyph, textX, textY, FontSize, new Color(200, 200, 200, 255));
             }
             
-            // Draw progress on center tile
+            // Draw progress percentage on center tile
             if (occupiedTiles.Count > 0)
             {
                 var centerTile = occupiedTiles[occupiedTiles.Count / 2];
                 var centerPos = context.GetWorldPosition(centerTile.X, centerTile.Y);
                 
+                // Draw progress percentage centered in tile
                 string progressText = $"{progressPercent}%";
-                int progressX = (int)centerPos.X + (context.TileSize - progressText.Length * 8) / 2;
-                int progressY = (int)centerPos.Y + context.TileSize - 18;
+                int progressX = (int)centerPos.X + (context.TileSize - progressText.Length * 7) / 2;
+                int progressY = (int)centerPos.Y + (context.TileSize - 14) / 2; // Center vertically
                 
                 RenderHelpers.DrawTextWithShadow(progressText, progressX, progressY, 14, new Color(255, 255, 100, 255));
-                
-                // Draw worker count
-                if (building.ConstructionWorkers.Count > 0)
-                {
-                    string workerText = $"??{building.ConstructionWorkers.Count}";
-                    int workerX = (int)centerPos.X + 2;
-                    int workerY = (int)centerPos.Y + 2;
-                    RenderHelpers.DrawTextWithShadow(workerText, workerX, workerY, 14, Color.White);
-                }
             }
         }
         
